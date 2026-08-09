@@ -4,7 +4,7 @@
 
 It is designed primarily for vehicles and other complex assets that use several Texture Sets and require repeated Base, Skew, Local, Cage, Fix, and other bake passes.
 
-> Current plugin version: **1.0.0**  
+> Current development version: **1.0.6**
 > Developed and tested primarily with **Substance 3D Painter 11.1.3** on Windows.
 
 ## Features
@@ -12,6 +12,8 @@ It is designed primarily for vehicles and other complex assets that use several 
 ### Batch Bake Setups
 
 - Save multiple reusable baking configurations as **Setups**.
+- Open a saved Setup with **Change Settings**, edit it in Painter's Baking
+  mode, and save parameter changes back automatically.
 - Run every checked Setup across all Texture Sets.
 - Choose output resolution and antialiasing separately for each Setup.
 - Enable or disable individual mesh maps per Setup.
@@ -80,6 +82,12 @@ Pressing **Refresh** checks existing assignments again, so a newly created targe
 
 Bake Manager includes a bridge for preparing and receiving bake data from **Marmoset Toolbag 5**.
 
+- Load low/high meshes through Quick Loader as separate bake groups.
+- Enable Multiple Texture Sets for material-based output.
+- Use offline baking and shared AO defaults with 2000 rays.
+- Remember previously entered output suffixes.
+- Return repeated bake outputs to the matching Texture Set folders and layers.
+
 ## Installation
 
 1. Download `BakeManager.zip` from the latest GitHub Release.
@@ -130,7 +138,7 @@ BakeManager.zip
 1. Change `PLUGIN_VERSION` in `bake_manager.py`:
 
 ```python
-PLUGIN_VERSION = "1.1.0"
+PLUGIN_VERSION = "X.Y.Z"
 ```
 
 2. Prepare the release archive with this structure:
@@ -148,14 +156,14 @@ BakeManager.zip
 4. Use a semantic version tag, for example:
 
 ```text
-v1.1.0
+vX.Y.Z
 ```
 
 5. Add the changelog to the Release description.
 6. Attach the archive with the exact name `BakeManager.zip`.
 7. Publish it as a normal release, not a draft or prerelease.
 
-The installed `1.0.0` plugin will then detect `v1.1.0` automatically.
+An installed older plugin will then detect the newer semantic version automatically.
 
 ## User data
 
@@ -201,6 +209,10 @@ Fix/Local/01
 - Issues and bug reports: use the repository **Issues** tab.
 - Stable downloads: use **Releases**.
 - Main plugin file: `BakeManager/bake_manager.py`.
+- Marmoset worker: `BakeManager/marmoset_bridge_worker.py`.
+
+The `1.0.6` development source is tracked through normal commits on `main`.
+Publishing source commits does not create a tag or GitHub Release automatically.
 
 ## License
 

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+
+# Scene-specific Bake Manager state and backups
+BakeManager/BakeProject__*.json
+BakeManager/BakeProject__*.json.bak
+BakeManager/ui_state.json
+BakeManager/.ignore_assets_pt
+
+# Private Painter assets and generated bridge state
+BakeManager/*.spsm
+BakeManager/_MarmosetBridge/

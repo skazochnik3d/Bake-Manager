@@ -36,7 +36,7 @@ DOCK_WIDGET = None
 TOOLBAR_BUTTON = None
 UPDATE_CONTROLLER = None
 
-PLUGIN_VERSION = "1.0.5"
+PLUGIN_VERSION = "1.0.6"
 UPDATE_REPOSITORY = "skazochnik3d/Bake-Manager"
 UPDATE_API_URL = (
     "https://api.github.com/repos/"
@@ -608,6 +608,20 @@ class AssetManagerWidget(QtWidgets.QWidget):
         self._bake_setup_queue_index = -1
         self._bake_setup_running = False
         self._bake_setup_events_connected = False
+        self._editing_bake_project_name: Optional[str] = None
+        self._editing_bake_setup_name: Optional[str] = None
+        self._editing_bake_texture_set_name: Optional[str] = None
+        self._editing_bake_setup_signature: Optional[str] = None
+
+        # Painter does not expose a public "baking parameter changed" event.
+        # While Change Settings keeps the Baking UI open, compare its live
+        # parameters with the last captured state and persist real changes.
+        self._bake_setup_edit_timer = QtCore.QTimer(self)
+        self._bake_setup_edit_timer.setInterval(700)
+        self._bake_setup_edit_timer.timeout.connect(
+            self.save_changed_bake_setup_settings
+        )
+
         self.build_ui()
         self.connect_signals()
         self.load_manager()
@@ -977,7 +991,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             self.show_bake_setup_menu
         )
         self.bake_setup_list.itemDoubleClicked.connect(
-            lambda _item: self.apply_selected_bake_setup()
+            lambda _item: self.change_selected_bake_setup_settings()
         )
         self.bake_setups_button.clicked.connect(
             self.start_bake_setup_queue
@@ -1810,6 +1824,8 @@ class AssetManagerWidget(QtWidgets.QWidget):
         if not name:
             return
 
+        self.stop_bake_setup_settings_edit()
+
         manager_data = self.bake_manager_data()
 
         if name not in manager_data.get("projects", {}):
@@ -2605,11 +2621,8 @@ class AssetManagerWidget(QtWidgets.QWidget):
         )
 
         menu = QtWidgets.QMenu(self)
-        apply_action = menu.addAction(
-            "Apply to Active Texture Set"
-        )
-        rerecord_action = menu.addAction(
-            "Re-record from Current Settings"
+        change_settings_action = menu.addAction(
+            "Change Settings"
         )
         rename_action = menu.addAction(
             "Rename"
@@ -2627,10 +2640,8 @@ class AssetManagerWidget(QtWidgets.QWidget):
             )
         )
 
-        if chosen == apply_action:
-            self.apply_selected_bake_setup()
-        elif chosen == rerecord_action:
-            self.rerecord_bake_setup(name)
+        if chosen == change_settings_action:
+            self.change_bake_setup_settings(name)
         elif chosen == rename_action:
             self.rename_bake_setup(name)
         elif chosen == duplicate_action:
@@ -2956,6 +2967,13 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 self._setup_disabled_bakers.pop(old_name)
             )
 
+        if (
+            self._editing_bake_project_name
+            == self.current_bake_project_name()
+            and self._editing_bake_setup_name == old_name
+        ):
+            self._editing_bake_setup_name = new_name
+
         self.refresh_bake_setup_list()
         self.save_data()
 
@@ -3002,6 +3020,12 @@ class AssetManagerWidget(QtWidgets.QWidget):
         ]
         self._setup_disabled_bakers.pop(name, None)
 
+        if (
+            self._editing_bake_project_name
+            == self.current_bake_project_name()
+            and self._editing_bake_setup_name == name
+        ):
+            self.stop_bake_setup_settings_edit()
         self.refresh_bake_setup_list()
         self.save_data()
 
@@ -3136,6 +3160,174 @@ class AssetManagerWidget(QtWidgets.QWidget):
             self.status_label.setText(
                 f'Applied "{setup_name}" to {texture_set_name}.'
             )
+
+    @staticmethod
+    def bake_setup_signature(setup: dict[str, Any]) -> str:
+        return json.dumps(
+            setup,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    def change_selected_bake_setup_settings(self):
+        setup_name = self.selected_bake_setup_name()
+
+        if setup_name:
+            self.change_bake_setup_settings(setup_name)
+
+    def change_bake_setup_settings(self, setup_name: str):
+        """Apply a Setup, open Baking mode and save its live edits."""
+        if not substance_painter.project.is_open():
+            self.status_label.setText("Open a Painter project first.")
+            return
+
+        texture_set_name = self.active_bake_texture_set_name()
+
+        if not texture_set_name:
+            self.status_label.setText("No Texture Set is available.")
+            return
+
+        project_name = self.current_bake_project_name()
+        setup = self.current_bake_project().get("setups", {}).get(
+            setup_name
+        )
+
+        if setup is None:
+            return
+
+        disabled = self._setup_disabled_bakers.get(setup_name, set())
+        active_bakers = [
+            usage
+            for usage in setup.get("enabled_bakers", [])
+            if usage not in disabled
+        ]
+
+        if not self.apply_bake_setup(
+            texture_set_name,
+            setup,
+            active_bakers,
+        ):
+            self.status_label.setText(
+                f'Could not apply Setup "{setup_name}".'
+            )
+            return
+
+        captured = self.capture_bake_setup(texture_set_name)
+
+        if captured is None:
+            self.status_label.setText(
+                "Could not read the applied bake settings."
+            )
+            return
+
+        for key in ("output_resolution", "antialiasing"):
+            if key not in captured and key in setup:
+                captured[key] = setup[key]
+
+        self.stop_bake_setup_settings_edit()
+        self._editing_bake_project_name = project_name
+        self._editing_bake_setup_name = setup_name
+        self._editing_bake_texture_set_name = texture_set_name
+        self._editing_bake_setup_signature = self.bake_setup_signature(
+            captured
+        )
+
+        try:
+            substance_painter.ui.switch_to_mode(
+                substance_painter.ui.UIMode.Baking
+            )
+        except Exception:
+            traceback.print_exc()
+            self.stop_bake_setup_settings_edit()
+            self.status_label.setText("Could not open Painter Baking mode.")
+            return
+
+        self._bake_setup_edit_timer.start()
+        self.status_label.setText(
+            f'Editing Setup "{setup_name}" for {texture_set_name}. '
+            "Changes are saved automatically."
+        )
+
+    def stop_bake_setup_settings_edit(self, refresh: bool = False):
+        editing_name = self._editing_bake_setup_name
+        self._bake_setup_edit_timer.stop()
+        self._editing_bake_project_name = None
+        self._editing_bake_setup_name = None
+        self._editing_bake_texture_set_name = None
+        self._editing_bake_setup_signature = None
+
+        if refresh and editing_name:
+            self.refresh_bake_setup_list()
+
+            for index in range(self.bake_setup_list.count()):
+                item = self.bake_setup_list.item(index)
+
+                if item.data(QtCore.Qt.ItemDataRole.UserRole) == editing_name:
+                    self.bake_setup_list.setCurrentItem(item)
+                    break
+
+    def save_changed_bake_setup_settings(self):
+        """Persist live Painter Baking settings into the edited Setup."""
+        project_name = self._editing_bake_project_name
+        setup_name = self._editing_bake_setup_name
+        texture_set_name = self._editing_bake_texture_set_name
+
+        if not project_name or not setup_name or not texture_set_name:
+            self.stop_bake_setup_settings_edit()
+            return
+
+        if not substance_painter.project.is_open():
+            self.stop_bake_setup_settings_edit()
+            return
+
+        try:
+            if substance_painter.project.is_busy():
+                return
+        except Exception:
+            pass
+
+        manager_data = self.bake_manager_data()
+        project = manager_data.get("projects", {}).get(project_name)
+
+        if project is None or setup_name not in project.get("setups", {}):
+            self.stop_bake_setup_settings_edit()
+            return
+
+        captured = self.capture_bake_setup(texture_set_name)
+
+        if captured is None:
+            return
+
+        previous_setup = project["setups"][setup_name]
+
+        for key in ("output_resolution", "antialiasing"):
+            if key not in captured and key in previous_setup:
+                captured[key] = previous_setup[key]
+
+        signature = self.bake_setup_signature(captured)
+
+        if signature != self._editing_bake_setup_signature:
+            project["setups"][setup_name] = captured
+            self._setup_disabled_bakers.pop(setup_name, None)
+            self._editing_bake_setup_signature = (
+                self.bake_setup_signature(captured)
+            )
+            self.save_data()
+            self.status_label.setText(
+                f'Auto-saved changes to Setup "{setup_name}".'
+            )
+
+        try:
+            still_baking = (
+                substance_painter.ui.get_current_mode()
+                == substance_painter.ui.UIMode.Baking
+            )
+        except Exception:
+            still_baking = True
+
+        if not still_baking:
+            self.stop_bake_setup_settings_edit(refresh=True)
 
     # ------------------------------------------------------------------
     # Bake Setup queue
@@ -7915,6 +8107,8 @@ class AssetManagerWidget(QtWidgets.QWidget):
         )
 
     def load_manager(self):
+        self.stop_bake_setup_settings_edit()
+
         if not substance_painter.project.is_open():
             self._loaded_project_data_path = None
             self.status_label.setText(

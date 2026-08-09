@@ -36,7 +36,7 @@ DOCK_WIDGET = None
 TOOLBAR_BUTTON = None
 UPDATE_CONTROLLER = None
 
-PLUGIN_VERSION = "1.1.0"
+PLUGIN_VERSION = "1.0.5"
 UPDATE_REPOSITORY = "skazochnik3d/Bake-Manager"
 UPDATE_API_URL = (
     "https://api.github.com/repos/"
@@ -50,6 +50,7 @@ UPDATE_MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
 UPDATE_MANAGED_FILES = (
     "__init__.py",
     "bake_manager.py",
+    "marmoset_bridge_worker.py",
     "Bake_Manager_Icon.png",
     "README_RU.txt",
 )
@@ -592,6 +593,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             self.check_marmoset_bridge_status
         )
         self._marmoset_status_path: Optional[str] = None
+        self._last_marmoset_status_update = None
         self._marmoset_process = None
         self._last_marmoset_manifest_generation = None
 
@@ -606,7 +608,6 @@ class AssetManagerWidget(QtWidgets.QWidget):
         self._bake_setup_queue_index = -1
         self._bake_setup_running = False
         self._bake_setup_events_connected = False
-
         self.build_ui()
         self.connect_signals()
         self.load_manager()
@@ -3000,6 +3001,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             if value != name
         ]
         self._setup_disabled_bakers.pop(name, None)
+
         self.refresh_bake_setup_list()
         self.save_data()
 
@@ -4353,6 +4355,92 @@ class AssetManagerWidget(QtWidgets.QWidget):
         )
         return result
 
+    @staticmethod
+    def marmoset_assignment_from_stem(
+        stem: str,
+        texture_set_name: str,
+    ) -> tuple[str, str]:
+        """Return Painter bake usage and Setup path encoded in a map name.
+
+        Marmoset variants follow the same convention as Bake Manager maps:
+        ``TextureSet_Map_Setup``.  For example, ``Cab_mat_N_Fix_Cage`` maps
+        to the Normal folder and the nested ``Fix/Cage`` source layer.
+        """
+        stem = str(stem).strip()
+        texture_set_name = str(
+            texture_set_name
+        ).strip()
+
+        if not stem or not texture_set_name:
+            return "", ""
+
+        prefix = texture_set_name + "_"
+
+        if stem.lower().startswith(
+            prefix.lower()
+        ):
+            map_and_setup = stem[
+                len(prefix):
+            ]
+        else:
+            map_and_setup = stem
+
+        suffix_to_usage = sorted(
+            (
+                (suffix, usage)
+                for usage, suffix
+                in MESH_MAP_FILE_SUFFIXES.items()
+            ),
+            key=lambda pair: len(pair[0]),
+            reverse=True,
+        )
+        upper_value = map_and_setup.upper()
+
+        for suffix, usage_name in suffix_to_usage:
+            upper_suffix = suffix.upper()
+
+            if upper_value == upper_suffix:
+                return usage_name, "Base"
+
+            marker = upper_suffix + "_"
+
+            if upper_value.startswith(marker):
+                setup_name = map_and_setup[
+                    len(marker):
+                ].strip("._- ")
+                return (
+                    usage_name,
+                    setup_name or "Base",
+                )
+
+        return "", ""
+
+    def update_marmoset_assignment_metadata(
+        self,
+        record: dict[str, Any],
+        stem: str,
+        texture_set_name: str,
+    ) -> bool:
+        usage_name, setup_name = (
+            self.marmoset_assignment_from_stem(
+                stem,
+                texture_set_name,
+            )
+        )
+
+        record["texture_set_name"] = (
+            texture_set_name
+        )
+
+        if not usage_name or not setup_name:
+            record.pop("bake_usage", None)
+            record.pop("bake_setup", None)
+            return False
+
+        record["bake_usage"] = usage_name
+        record["bake_setup"] = setup_name
+        return True
+
     def set_node_bitmap_source(
         self,
         node,
@@ -4953,12 +5041,46 @@ class AssetManagerWidget(QtWidgets.QWidget):
             substance_painter.export,
             cache_dir,
             targets,
+            output_name_suffix=setup_name,
         )
         resources = self._data.setdefault("resources", {})
         folder = self.texture_set_folder_path(set_name)
         made = 0
+        setup_source_urls = set()
+
+        try:
+            source_texture_set = (
+                substance_painter.textureset.TextureSet.from_name(
+                    set_name
+                )
+            )
+        except Exception:
+            source_texture_set = None
 
         for usage in active_bakers:
+            source_resource_url = ""
+
+            if source_texture_set is not None:
+                try:
+                    source_usage = (
+                        substance_painter.textureset.MeshMapUsage
+                        .__members__.get(usage)
+                    )
+                    source_resource_id = (
+                        source_texture_set.get_mesh_map_resource(
+                            source_usage
+                        )
+                        if source_usage is not None
+                        else None
+                    )
+
+                    if source_resource_id is not None:
+                        source_resource_url = (
+                            source_resource_id.url()
+                        )
+                except Exception:
+                    source_resource_url = ""
+
             key = f"setup|{set_name}|{usage}"
             source_path = exported.get((key, usage))
 
@@ -4991,6 +5113,16 @@ class AssetManagerWidget(QtWidgets.QWidget):
             destination_path = os.path.join(
                 destination_directory,
                 stem + ".png",
+            )
+            legacy_stem = "_".join(
+                (
+                    self.safe_bake_name(set_name),
+                    self.safe_bake_name(suffix),
+                )
+            )
+            legacy_path = os.path.join(
+                destination_directory,
+                legacy_stem + ".png",
             )
 
             if os.path.normcase(source_path) != os.path.normcase(
@@ -5042,7 +5174,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             relinked = (
                 self.relink_layers_to_renamed_texture(
                     record,
-                    source_path,
+                    legacy_path,
                     destination_path,
                     set_name,
                 )
@@ -5060,9 +5192,69 @@ class AssetManagerWidget(QtWidgets.QWidget):
             record[
                 "auto_assigned_layer_sources"
             ] = auto_assigned
+
+            # Older builds first exported <Set>_<Map>.png and then copied it
+            # to <Set>_<Map>_<Setup>.png. Remove that intermediate artifact
+            # and its stale manager record after the suffixed file is ready.
+            legacy_removed = (
+                os.path.normcase(legacy_path)
+                == os.path.normcase(destination_path)
+                or not os.path.isfile(legacy_path)
+            )
+
+            if not legacy_removed:
+                try:
+                    os.remove(legacy_path)
+                    legacy_removed = True
+                except OSError:
+                    traceback.print_exc()
+
+            if legacy_removed:
+                normalized_legacy_path = os.path.normcase(
+                    os.path.abspath(legacy_path)
+                )
+
+                for old_url, old_record in list(resources.items()):
+                    if old_url == url:
+                        continue
+
+                    old_preview_path = str(
+                        old_record.get("preview_path", "")
+                    )
+
+                    if (
+                        old_preview_path
+                        and os.path.normcase(
+                            os.path.abspath(old_preview_path)
+                        )
+                        == normalized_legacy_path
+                    ):
+                        resources.pop(old_url, None)
+
+            if source_resource_url:
+                setup_source_urls.add(source_resource_url)
+
             made += 1
 
         if made:
+            # The native mesh-map ResourceIDs are inputs for the Setup export,
+            # not separate deliverables. Keep them usable in Painter but hide
+            # them from this manager so a later Refresh cannot recreate the
+            # legacy <Set>_<Map> tiles.
+            hidden_urls = set(
+                self._data.setdefault(
+                    "hidden_resource_urls",
+                    [],
+                )
+            )
+            hidden_urls.update(setup_source_urls)
+            self._data["hidden_resource_urls"] = sorted(
+                hidden_urls
+            )
+
+            for source_url in setup_source_urls:
+                resources.pop(source_url, None)
+
             self._preview_cache.clear()
             self.save_data()
             self.populate_asset_tiles()
@@ -7750,6 +7942,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             )
             self.ensure_default_folders()
             self.organize_generated_files_on_disk()
+            self.synchronize_disk_folders()
             self.remove_obsolete_root_folders()
 
             ui_state = self._data.setdefault(
@@ -7822,6 +8015,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 save=False,
             )
 
+            self.synchronize_managed_disk_files()
             self.synchronize_project_resources()
             self.populate_folder_tree()
 
@@ -7877,8 +8071,17 @@ class AssetManagerWidget(QtWidgets.QWidget):
             return
 
         try:
+            recovered_marmoset = (
+                self.recover_saved_marmoset_scene_outputs()
+            )
             moved_files = (
                 self.organize_generated_files_on_disk()
+            )
+            discovered_folders = (
+                self.synchronize_disk_folders()
+            )
+            synchronized_files = (
+                self.synchronize_managed_disk_files()
             )
             self.synchronize_project_resources()
             imported_marmoset = self.import_marmoset_manifest(
@@ -7898,6 +8101,23 @@ class AssetManagerWidget(QtWidgets.QWidget):
             if moved_files:
                 status_parts.append(
                     f"organized {moved_files} file(s)"
+                )
+
+            if recovered_marmoset:
+                status_parts.append(
+                    "recovered "
+                    f"{recovered_marmoset} saved-scene "
+                    "Marmoset map(s)"
+                )
+
+            if discovered_folders:
+                status_parts.append(
+                    f"found {discovered_folders} folder(s) on disk"
+                )
+
+            if synchronized_files:
+                status_parts.append(
+                    f"synchronized {synchronized_files} disk texture(s)"
                 )
 
             if imported_marmoset:
@@ -10760,6 +10980,25 @@ class AssetManagerWidget(QtWidgets.QWidget):
             "marmoset_painter_bake_bridge.py",
         )
 
+        worker_template = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "marmoset_bridge_worker.py",
+        )
+
+        if not os.path.isfile(worker_template):
+            return None
+
+        if os.path.isfile(worker_template):
+            try:
+                shutil.copy2(
+                    worker_template,
+                    worker_path,
+                )
+                return worker_path
+            except OSError:
+                traceback.print_exc()
+                return None
+
         worker_source = 'import json\nimport os\nimport re\nimport shutil\nimport sys\nimport time\nimport traceback\n\nimport mset\n\n\nJOB = {}\nJOB_PATH = ""\nBAKER = None\nBRIDGE_WINDOW = None\nSTATUS_LABEL = None\nPENDING_BAKE = None\nROOT_CLEANUP_UNTIL = 0.0\n\n# Raw files that may briefly appear while Toolbag is baking.\nRAW_IMAGE_EXTENSIONS = (\n    ".png",\n    ".tga",\n    ".jpg",\n    ".jpeg",\n    ".psd",\n    ".tif",\n    ".tiff",\n)\n\nMAP_INFO = (\n    ("bentnormal", "BN", "Bent Normals"),\n    ("worldspacenormal", "WSN", "World Space Normal"),\n    ("objectnormal", "WSN", "World Space Normal"),\n    ("ambientocclusion", "AO", "Ambient Occlusion"),\n    ("aobakermap", "AO", "Ambient Occlusion"),\n    ("curvature", "C", "Curvature"),\n    ("thickness", "T", "Thickness"),\n    ("position", "P", "Position"),\n    ("height", "H", "Height"),\n    ("materialid", "ID", "ID Map"),\n    ("objectid", "ID", "ID Map"),\n    ("groupid", "ID", "ID Map"),\n    ("opacity", "O", "Opacity"),\n    ("transparency", "O", "Opacity"),\n    ("normal", "N", "Normal"),\n)\n\n\ndef write_json_atomic(path, payload):\n    os.makedirs(os.path.dirname(path), exist_ok=True)\n    temporary_path = path + ".tmp"\n\n    with open(temporary_path, "w", encoding="utf-8") as stream:\n        json.dump(\n            payload,\n            stream,\n            ensure_ascii=False,\n            indent=4,\n        )\n\n    os.replace(temporary_path, path)\n\n\ndef write_status(state, message, **extra):\n    status_path = JOB.get("status_path", "")\n\n    if not status_path:\n        return\n\n    payload = {\n        "version": 3,\n        "state": state,\n        "message": message,\n        "updated_at": time.time(),\n    }\n    payload.update(extra)\n\n    try:\n        write_json_atomic(status_path, payload)\n    except Exception:\n        traceback.print_exc()\n\n\ndef set_status_text(message):\n    global STATUS_LABEL\n\n    if STATUS_LABEL is not None:\n        try:\n            STATUS_LABEL.text = message\n        except Exception:\n            pass\n\n    print("[PainterBridge] " + message)\n\n\ndef safe_name(value):\n    value = str(value or "Texture_Set").strip()\n\n    for character in \'<>:"/\\\\|?*\':\n        value = value.replace(character, "_")\n\n    value = value.rstrip(". ")\n\n    return value or "Texture_Set"\n\n\ndef normalized_token(value):\n    return re.sub(\n        r"[^a-z0-9]+",\n        "",\n        str(value).lower(),\n    )\n\n\ndef child_named(parent, wanted):\n    wanted = wanted.strip().lower()\n\n    try:\n        for child in parent.getChildren():\n            if str(child.name).strip().lower() == wanted:\n                return child\n    except Exception:\n        pass\n\n    try:\n        found = parent.findInChildren(wanted.capitalize())\n\n        if found is not None:\n            return found\n    except Exception:\n        pass\n\n    return None\n\n\ndef set_visibility_recursive(scene_object, visible):\n    try:\n        scene_object.visible = bool(visible)\n    except Exception:\n        pass\n\n    try:\n        children = list(scene_object.getChildren())\n    except Exception:\n        children = []\n\n    for child in children:\n        set_visibility_recursive(\n            child,\n            visible,\n        )\n\n\ndef object_uid(scene_object):\n    try:\n        return str(scene_object.uid)\n    except Exception:\n        return str(id(scene_object))\n\n\ndef import_under(path, parent):\n    """Import a model and parent every newly created root under a bake slot."""\n    before_objects = list(\n        mset.getAllObjects()\n    )\n    before_uids = {\n        object_uid(scene_object)\n        for scene_object in before_objects\n    }\n\n    imported = mset.importModel(path)\n\n    after_objects = list(\n        mset.getAllObjects()\n    )\n    new_objects = [\n        scene_object\n        for scene_object in after_objects\n        if object_uid(scene_object) not in before_uids\n    ]\n    new_uids = {\n        object_uid(scene_object)\n        for scene_object in new_objects\n    }\n\n    roots = []\n\n    if imported is not None:\n        roots.append(imported)\n\n    for scene_object in new_objects:\n        try:\n            object_parent = scene_object.parent\n        except Exception:\n            object_parent = None\n\n        if (\n            object_parent is None\n            or object_uid(object_parent) not in new_uids\n        ):\n            if scene_object not in roots:\n                roots.append(scene_object)\n\n    if not roots:\n        raise RuntimeError(\n            "Toolbag did not create scene objects for: " + path\n        )\n\n    imported_name = os.path.splitext(\n        os.path.basename(path)\n    )[0]\n\n    for index, root in enumerate(roots):\n        root.parent = parent\n\n        try:\n            root.visible = True\n        except Exception:\n            pass\n\n        try:\n            if len(roots) == 1:\n                root.name = imported_name\n            else:\n                root.name = (\n                    imported_name\n                    + "_"\n                    + str(index + 1)\n                )\n        except Exception:\n            pass\n\n    return roots\n\n\ndef direct_child_count(parent):\n    try:\n        return len(\n            list(parent.getChildren())\n        )\n    except Exception:\n        return 0\n\n\ndef map_code_and_label(map_object):\n    class_name = type(map_object).__name__.lower()\n    suffix = str(\n        getattr(map_object, "suffix", "")\n    ).lower()\n    identity = normalized_token(\n        class_name + " " + suffix\n    )\n\n    for token, code, label in MAP_INFO:\n        if token in identity:\n            return code, label\n\n    cleaned_suffix = re.sub(\n        r"[^A-Za-z0-9]+",\n        "",\n        str(getattr(map_object, "suffix", "")),\n    ).upper()\n\n    if cleaned_suffix:\n        return cleaned_suffix[:12], cleaned_suffix[:12]\n\n    fallback = re.sub(\n        r"bakermap$",\n        "",\n        class_name,\n    )\n    fallback = re.sub(\n        r"[^a-z0-9]+",\n        "",\n        fallback,\n    ).upper()\n\n    return fallback[:12] or "MAP", fallback[:12] or "Map"\n\n\ndef configure_enabled_maps():\n    configured = []\n\n    for map_object in BAKER.getAllMaps():\n        try:\n            enabled = bool(map_object.enabled)\n        except Exception:\n            enabled = True\n\n        if not enabled:\n            continue\n\n        code, label = map_code_and_label(map_object)\n\n        try:\n            map_object.suffix = "_" + code\n        except Exception:\n            traceback.print_exc()\n\n        configured.append(\n            {\n                "code": code,\n                "label": label,\n                "class_name": type(map_object).__name__,\n                "suffix": str(\n                    getattr(map_object, "suffix", "")\n                ),\n            }\n        )\n\n    return configured\n\n\ndef ensure_multiple_texture_sets():\n    """Keep Toolbag\'s Tile Mode set to Multiple Texture Sets."""\n    applied = False\n\n    try:\n        BAKER.multipleTextureSets = True\n        applied = bool(\n            BAKER.multipleTextureSets\n        )\n    except Exception:\n        pass\n\n    # Some Toolbag builds expose the same option as tileMode. Use it only\n    # when present, so older/newer API variants do not fail.\n    if hasattr(BAKER, "tileMode"):\n        for value in (\n            "Multiple Texture Sets",\n            "MultipleTextureSets",\n            "Multiple",\n        ):\n            try:\n                BAKER.tileMode = value\n                applied = True\n                break\n            except Exception:\n                continue\n\n    return applied\n\n\ndef force_png_output():\n    """Force separate PNG files across Toolbag API revisions."""\n    applied = []\n\n    # In Toolbag 5.02 the former outputSinglePsd member may be absent.\n    # An explicit .png output path is therefore the primary format signal.\n    base_name = safe_name(\n        JOB.get(\n            "output_base_name",\n            JOB.get(\n                "baker_name",\n                "Painter_Bake",\n            ),\n        )\n    )\n    output_path = os.path.join(\n        JOB["output_directory"],\n        base_name + ".png",\n    )\n    BAKER.outputPath = output_path\n    applied.append(\n        {\n            "member": "outputPath",\n            "value": output_path,\n        }\n    )\n\n    # Try format members exposed by newer Toolbag builds without depending\n    # on one exact API spelling.\n    member_names = (\n        "outputFormat",\n        "outputFileFormat",\n        "outputImageFormat",\n        "imageFormat",\n        "fileFormat",\n        "format",\n    )\n\n    for member_name in member_names:\n        if not hasattr(BAKER, member_name):\n            continue\n\n        for value in ("PNG", "png", ".png"):\n            try:\n                setattr(\n                    BAKER,\n                    member_name,\n                    value,\n                )\n                applied.append(\n                    {\n                        "member": member_name,\n                        "value": value,\n                    }\n                )\n                break\n            except Exception:\n                continue\n\n    # Request 16 bits per channel. Toolbag 5 builds have used several\n    # property names, so use the first compatible one.\n    bit_depth_members = (\n        "outputBits",\n        "outputBitDepth",\n        "outputBitsPerChannel",\n        "bitsPerChannel",\n        "bitDepth",\n    )\n\n    bit_depth_applied = False\n\n    for member_name in bit_depth_members:\n        if not hasattr(BAKER, member_name):\n            continue\n\n        for value in (\n            16,\n            "16",\n            "16 bit",\n            "16-bit",\n        ):\n            try:\n                setattr(\n                    BAKER,\n                    member_name,\n                    value,\n                )\n                applied.append(\n                    {\n                        "member": member_name,\n                        "value": value,\n                    }\n                )\n                bit_depth_applied = True\n                break\n            except Exception:\n                continue\n\n        if bit_depth_applied:\n            break\n\n    # Older versions expose this switch; newer versions simply omit it.\n    if hasattr(BAKER, "outputSinglePsd"):\n        try:\n            BAKER.outputSinglePsd = False\n            applied.append(\n                {\n                    "member": "outputSinglePsd",\n                    "value": False,\n                }\n            )\n        except Exception:\n            pass\n\n    return applied\n\n\ndef all_known_texture_sets():\n    result = []\n\n    for name in JOB.get(\n        "texture_set_names",\n        [],\n    ):\n        name = str(name).strip()\n\n        if (\n            name\n            and name not in result\n        ):\n            result.append(name)\n\n    return result\n\n\ndef choose_texture_set_for_file(\n    file_name,\n    texture_set_names,\n):\n    file_token = normalized_token(\n        os.path.splitext(file_name)[0]\n    )\n\n    matches = []\n\n    for name in texture_set_names:\n        token = normalized_token(name)\n\n        if token and token in file_token:\n            matches.append(\n                (\n                    len(token),\n                    name,\n                )\n            )\n\n    if matches:\n        matches.sort(reverse=True)\n        return matches[0][1]\n\n    if len(texture_set_names) == 1:\n        return texture_set_names[0]\n\n    return "Unmatched"\n\n\ndef infer_file_map_type(file_name):\n    stem = os.path.splitext(\n        file_name\n    )[0].lower()\n\n    # Long names must be checked before "normal".\n    patterns = (\n        (\n            (\n                "world_space_normal",\n                "worldspacenormal",\n                "object_space_normal",\n                "objectspacenormal",\n                "object_normal",\n                "_wsn",\n            ),\n            "WSN",\n            "World Space Normal",\n        ),\n        (\n            (\n                "bent_normals",\n                "bent_normal",\n                "bentnormals",\n                "bentnormal",\n                "_bn",\n            ),\n            "BN",\n            "Bent Normals",\n        ),\n        (\n            (\n                "ambient_occlusion",\n                "ambientocclusion",\n                "occlusion",\n                "_ao",\n            ),\n            "AO",\n            "Ambient Occlusion",\n        ),\n        (\n            (\n                "curvature",\n                "_curv",\n                "_c",\n            ),\n            "C",\n            "Curvature",\n        ),\n        (\n            (\n                "thickness",\n                "_thick",\n                "_t",\n            ),\n            "T",\n            "Thickness",\n        ),\n        (\n            (\n                "position",\n                "_pos",\n                "_p",\n            ),\n            "P",\n            "Position",\n        ),\n        (\n            (\n                "height",\n                "displacement",\n                "_h",\n            ),\n            "H",\n            "Height",\n        ),\n        (\n            (\n                "material_id",\n                "materialid",\n                "object_id",\n                "objectid",\n                "group_id",\n                "groupid",\n                "_id",\n            ),\n            "ID",\n            "ID Map",\n        ),\n        (\n            (\n                "opacity",\n                "transparency",\n                "_o",\n            ),\n            "O",\n            "Opacity",\n        ),\n        (\n            (\n                "normal",\n                "_n",\n            ),\n            "N",\n            "Normal",\n        ),\n    )\n\n    for tokens, code, label in patterns:\n        for token in tokens:\n            if token.startswith("_") and len(token) <= 3:\n                if re.search(\n                    re.escape(token)\n                    + r"(?:_\\d+)?$",\n                    stem,\n                ):\n                    return code, label\n            elif token in stem:\n                return code, label\n\n    return "MAP", "Texture"\n\n\ndef clear_raw_output_files():\n    output_directory = JOB["output_directory"]\n\n    if not os.path.isdir(output_directory):\n        return\n\n    for file_name in os.listdir(\n        output_directory\n    ):\n        path = os.path.join(\n            output_directory,\n            file_name,\n        )\n\n        if not os.path.isfile(path):\n            continue\n\n        extension = os.path.splitext(\n            file_name\n        )[1].lower()\n\n        if extension not in RAW_IMAGE_EXTENSIONS:\n            continue\n\n        try:\n            os.remove(path)\n        except OSError:\n            traceback.print_exc()\n\n\ndef collect_raw_output_files(recent_since=None):\n    output_directory = JOB["output_directory"]\n    result = []\n\n    if not os.path.isdir(output_directory):\n        return result\n\n    for root, _directories, file_names in os.walk(\n        output_directory\n    ):\n        # Ignore already organized per-set output from older bakes.\n        if os.path.normcase(root) != os.path.normcase(\n            output_directory\n        ):\n            continue\n\n        for file_name in file_names:\n            extension = os.path.splitext(\n                file_name\n            )[1].lower()\n\n            if extension not in RAW_IMAGE_EXTENSIONS:\n                continue\n\n            path = os.path.normpath(\n                os.path.join(root, file_name)\n            )\n\n            try:\n                modified = os.path.getmtime(path)\n                size_bytes = os.path.getsize(path)\n            except OSError:\n                continue\n\n            if (\n                recent_since is not None\n                and modified < recent_since - 2.0\n            ):\n                continue\n\n            result.append(\n                {\n                    "path": path,\n                    "file_name": file_name,\n                    "modified": modified,\n                    "size_bytes": size_bytes,\n                }\n            )\n\n    result.sort(\n        key=lambda item: item["path"].lower()\n    )\n    return result\n\n\ndef file_snapshot(files):\n    return tuple(\n        (\n            item["path"],\n            item["modified"],\n            item["size_bytes"],\n        )\n        for item in files\n    )\n\n\ndef try_convert_single_image_to_png(\n    source_path,\n    png_path,\n):\n    """Best-effort fallback for non-layered image outputs."""\n    try:\n        from PIL import Image\n\n        with Image.open(source_path) as image:\n            image.save(\n                png_path,\n                format="PNG",\n            )\n\n        return os.path.isfile(png_path)\n\n    except Exception:\n        pass\n\n    try:\n        image = mset.Image(source_path)\n        image.writeOut(png_path)\n        return os.path.isfile(png_path)\n\n    except Exception:\n        return False\n\n\ndef organize_output_files(raw_files):\n    texture_sets = all_known_texture_sets()\n    organized = []\n    psd_failures = []\n\n    for raw in raw_files:\n        source_path = raw["path"]\n        extension = os.path.splitext(\n            source_path\n        )[1].lower()\n        texture_set = choose_texture_set_for_file(\n            raw["file_name"],\n            texture_sets,\n        )\n        map_code, map_label = infer_file_map_type(\n            raw["file_name"]\n        )\n\n        destination_directory = os.path.join(\n            JOB["output_directory"],\n            safe_name(texture_set),\n        )\n        os.makedirs(\n            destination_directory,\n            exist_ok=True,\n        )\n\n        destination_path = os.path.join(\n            destination_directory,\n            safe_name(texture_set)\n            + "_"\n            + map_code\n            + ".png",\n        )\n\n        if extension == ".png":\n            if (\n                os.path.normcase(source_path)\n                != os.path.normcase(\n                    destination_path\n                )\n            ):\n                try:\n                    if os.path.isfile(\n                        destination_path\n                    ):\n                        os.remove(\n                            destination_path\n                        )\n\n                    os.replace(\n                        source_path,\n                        destination_path,\n                    )\n\n                except OSError:\n                    shutil.copy2(\n                        source_path,\n                        destination_path,\n                    )\n\n                    try:\n                        os.remove(source_path)\n                    except OSError:\n                        pass\n\n        else:\n            converted = try_convert_single_image_to_png(\n                source_path,\n                destination_path,\n            )\n\n            if not converted:\n                if extension == ".psd":\n                    psd_failures.append(source_path)\n                continue\n\n        try:\n            modified = os.path.getmtime(\n                destination_path\n            )\n            size_bytes = os.path.getsize(\n                destination_path\n            )\n        except OSError:\n            continue\n\n        organized.append(\n            {\n                "path": os.path.normpath(\n                    destination_path\n                ),\n                "file_name": os.path.basename(\n                    destination_path\n                ),\n                "modified": modified,\n                "size_bytes": size_bytes,\n                "map_type": map_label,\n                "map_code": map_code,\n                "texture_set": texture_set,\n                "manager_folder": (\n                    str(texture_set)\n                    + "/Marmoset"\n                ),\n            }\n        )\n\n    if psd_failures and not organized:\n        raise RuntimeError(\n            "Toolbag still produced a layered PSD instead of separate PNG "\n            "maps. The bridge set an explicit .png output path, but this "\n            "Toolbag build kept the scene\'s PSD mode."\n        )\n\n    organized.sort(\n        key=lambda item: item["path"].lower()\n    )\n\n    return organized\n\n\ndef finish_bake(raw_files):\n    global PENDING_BAKE\n    global ROOT_CLEANUP_UNTIL\n\n    organized_files = organize_output_files(\n        raw_files\n    )\n\n    if not organized_files:\n        raise RuntimeError(\n            "Toolbag finished, but no PNG bake maps were produced."\n        )\n\n    manifest_path = JOB["manifest_path"]\n\n    manifest = {\n        "version": 3,\n        "source": "Marmoset Toolbag 5",\n        "generation": time.time(),\n        "painter_project": JOB.get(\n            "painter_project",\n            "",\n        ),\n        "texture_set_names": all_known_texture_sets(),\n        "output_directory": JOB[\n            "output_directory"\n        ],\n        "output_base": BAKER.outputPath,\n        "files": organized_files,\n    }\n\n    write_json_atomic(\n        manifest_path,\n        manifest,\n    )\n\n    scene_path = JOB.get(\n        "scene_path",\n        "",\n    )\n\n    if scene_path:\n        try:\n            mset.saveScene(scene_path)\n        except Exception:\n            traceback.print_exc()\n\n    PENDING_BAKE = None\n\n    clear_raw_output_files()\n    ROOT_CLEANUP_UNTIL = time.time() + 15.0\n\n    message = (\n        "Bake finished. "\n        + str(len(organized_files))\n        + " PNG map(s) sent to Painter."\n    )\n    set_status_text(message)\n    write_status(\n        "baked",\n        message,\n        manifest_path=manifest_path,\n        output_directory=JOB[\n            "output_directory"\n        ],\n        file_count=len(\n            organized_files\n        ),\n        scene_path=scene_path,\n    )\n\n\ndef poll_bake_output():\n    global PENDING_BAKE\n\n    pending = PENDING_BAKE\n\n    if pending is None:\n        return\n\n    now = time.time()\n\n    if now - pending["started_at"] > 900.0:\n        PENDING_BAKE = None\n        message = (\n            "Timed out while waiting for baked maps."\n        )\n        set_status_text(message)\n        write_status(\n            "error",\n            message,\n        )\n        return\n\n    files = collect_raw_output_files(\n        recent_since=pending["started_at"]\n    )\n\n    if not files:\n        return\n\n    snapshot = file_snapshot(files)\n\n    if snapshot == pending.get("snapshot"):\n        pending["stable_checks"] += 1\n    else:\n        pending["snapshot"] = snapshot\n        pending["stable_checks"] = 0\n\n    # Wait for multiple stable checks so Painter never reads half-written files.\n    if pending["stable_checks"] >= 10:\n        finish_bake(files)\n\n\ndef periodic_update():\n    global PENDING_BAKE\n    global ROOT_CLEANUP_UNTIL\n\n    try:\n        poll_bake_output()\n\n        # Some Toolbag builds may recreate root-level images after bake()\n        # returns. Keep cleaning only the temporary root files for a short\n        # period; organized Texture Set subfolders are never touched.\n        if ROOT_CLEANUP_UNTIL > time.time():\n            clear_raw_output_files()\n        elif ROOT_CLEANUP_UNTIL:\n            clear_raw_output_files()\n            ROOT_CLEANUP_UNTIL = 0.0\n\n    except Exception as error:\n        PENDING_BAKE = None\n        traceback.print_exc()\n        set_status_text(\n            "Bridge error: " + str(error)\n        )\n        write_status(\n            "error",\n            str(error),\n            traceback=traceback.format_exc(),\n        )\n\n\ndef bake_and_send():\n    global PENDING_BAKE\n\n    if PENDING_BAKE is not None:\n        set_status_text(\n            "A bake is already running."\n        )\n        return\n\n    try:\n        output_directory = JOB[\n            "output_directory"\n        ]\n        os.makedirs(\n            output_directory,\n            exist_ok=True,\n        )\n\n        # Ensure Toolbag generates one result per low-poly material.\n        ensure_multiple_texture_sets()\n\n        clear_raw_output_files()\n\n        format_members = force_png_output()\n        configured_maps = (\n            configure_enabled_maps()\n        )\n\n        PENDING_BAKE = {\n            "started_at": time.time(),\n            "snapshot": None,\n            "stable_checks": 0,\n        }\n\n        set_status_text(\n            "Baking separate 16-bit PNG maps in Toolbag..."\n        )\n        write_status(\n            "baking",\n            "Toolbag is baking separate 16-bit PNG maps...",\n            output_directory=output_directory,\n            maps=configured_maps,\n            png_settings=format_members,\n            texture_sets=all_known_texture_sets(),\n        )\n\n        BAKER.bake()\n\n        # Do not move files immediately after bake() returns. Toolbag can\n        # still be finalizing them, which caused duplicate root-level PNGs.\n        # The stability watcher will organize them only after they stop\n        # changing for several checks.\n        poll_bake_output()\n\n    except Exception as error:\n        PENDING_BAKE = None\n        traceback.print_exc()\n        set_status_text(\n            "Bake failed: " + str(error)\n        )\n        write_status(\n            "error",\n            str(error),\n            traceback=traceback.format_exc(),\n        )\n\n\ndef build_window():\n    global BRIDGE_WINDOW\n    global STATUS_LABEL\n\n    BRIDGE_WINDOW = mset.UIWindow(\n        "Painter Bake Bridge"\n    )\n\n    try:\n        BRIDGE_WINDOW.width = 430\n    except Exception:\n        pass\n\n    try:\n        project_label = mset.UILabel(\n            "Painter project: "\n            + os.path.basename(\n                JOB.get(\n                    "painter_project",\n                    "",\n                )\n            )\n        )\n        BRIDGE_WINDOW.addElement(\n            project_label\n        )\n        BRIDGE_WINDOW.addReturn()\n\n        sets_label = mset.UILabel(\n            "Texture Sets: "\n            + ", ".join(\n                all_known_texture_sets()\n            )\n        )\n        BRIDGE_WINDOW.addElement(\n            sets_label\n        )\n        BRIDGE_WINDOW.addReturn()\n\n        output_label = mset.UILabel(\n            "Output: "\n            + JOB[\n                "output_directory"\n            ]\n        )\n        BRIDGE_WINDOW.addElement(\n            output_label\n        )\n        BRIDGE_WINDOW.addReturn()\n\n        STATUS_LABEL = mset.UILabel(\n            "Ready. Configure the Baker, then press Bake & Send."\n        )\n        BRIDGE_WINDOW.addElement(\n            STATUS_LABEL\n        )\n        BRIDGE_WINDOW.addReturn()\n\n    except Exception:\n        traceback.print_exc()\n\n    bake_button = mset.UIButton(\n        "Bake & Send to Painter"\n    )\n    bake_button.onClick = bake_and_send\n    BRIDGE_WINDOW.addElement(\n        bake_button\n    )\n\n\ndef create_setup():\n    global BAKER\n\n    low_paths = [\n        os.path.normpath(path)\n        for path in JOB.get(\n            "low_poly_paths",\n            [],\n        )\n        if os.path.isfile(path)\n    ]\n    high_paths = [\n        os.path.normpath(path)\n        for path in JOB.get(\n            "high_poly_paths",\n            [],\n        )\n        if os.path.isfile(path)\n    ]\n\n    if not low_paths:\n        raise RuntimeError(\n            "No valid low-poly file was supplied."\n        )\n\n    if not high_paths:\n        raise RuntimeError(\n            "No valid high-poly file was supplied."\n        )\n\n    os.makedirs(\n        JOB["output_directory"],\n        exist_ok=True,\n    )\n\n    # Clean duplicate root images left by older bridge versions.\n    clear_raw_output_files()\n\n    mset.newScene()\n\n    BAKER = mset.BakerObject()\n    BAKER.name = JOB.get(\n        "baker_name",\n        "Painter Bake Project",\n    )\n\n    # Keep Toolbag in Multiple Texture Sets mode.\n    ensure_multiple_texture_sets()\n\n    try:\n        BAKER.useHiddenMeshes = True\n    except Exception:\n        pass\n\n    force_png_output()\n\n    group = BAKER.addGroup(\n        JOB.get(\n            "group_name",\n            "Bake Group",\n        )\n    )\n\n    low_slot = child_named(\n        group,\n        "Low",\n    )\n    high_slot = child_named(\n        group,\n        "High",\n    )\n\n    if (\n        low_slot is None\n        or high_slot is None\n    ):\n        raise RuntimeError(\n            "Toolbag created a Bake Group, but its High/Low slots "\n            "could not be found."\n        )\n\n    imported_low = []\n    imported_high = []\n\n    for path in low_paths:\n        imported_low.extend(\n            import_under(\n                path,\n                low_slot,\n            )\n        )\n\n    for path in high_paths:\n        imported_high.extend(\n            import_under(\n                path,\n                high_slot,\n            )\n        )\n\n    if (\n        not imported_low\n        or direct_child_count(low_slot) == 0\n    ):\n        raise RuntimeError(\n            "The Low mesh file was opened, but no objects were placed "\n            "inside the Low bake slot."\n        )\n\n    if (\n        not imported_high\n        or direct_child_count(high_slot) == 0\n    ):\n        raise RuntimeError(\n            "The High mesh file was opened, but no objects were placed "\n            "inside the High bake slot."\n        )\n\n    # Importing meshes can refresh the Baker UI, so apply the mode again.\n    ensure_multiple_texture_sets()\n\n    # Keep both High and Low visible when the scene opens.\n    set_visibility_recursive(\n        high_slot,\n        True,\n    )\n    set_visibility_recursive(\n        low_slot,\n        True,\n    )\n\n    try:\n        high_slot.collapsed = False\n        low_slot.collapsed = False\n    except Exception:\n        pass\n\n    # Select both source groups and frame the complete imported setup.\n    try:\n        mset.setSelectedObjects(\n            imported_low + imported_high\n        )\n    except Exception:\n        pass\n\n    try:\n        mset.frameScene()\n    except Exception:\n        pass\n\n    texture_sets = all_known_texture_sets()\n\n    scene_path = JOB.get(\n        "scene_path",\n        "",\n    )\n\n    if scene_path:\n        os.makedirs(\n            os.path.dirname(scene_path),\n            exist_ok=True,\n        )\n        mset.saveScene(scene_path)\n\n    build_window()\n    mset.callbacks.onPeriodicUpdate = (\n        periodic_update\n    )\n\n    message = (\n        "Bake Project created: "\n        + str(len(imported_low))\n        + " Low root(s), "\n        + str(len(imported_high))\n        + " High root(s). Both are visible; Multiple Texture Sets is enabled."\n    )\n    set_status_text(message)\n    write_status(\n        "ready",\n        message,\n        scene_path=scene_path,\n        output_directory=JOB[\n            "output_directory"\n        ],\n        manifest_path=JOB[\n            "manifest_path"\n        ],\n        low_poly_paths=low_paths,\n        high_poly_paths=high_paths,\n        texture_sets=texture_sets,\n        imported_low_count=len(\n            imported_low\n        ),\n        imported_high_count=len(\n            imported_high\n        ),\n    )\n\n\ndef main():\n    global JOB\n    global JOB_PATH\n\n    if len(sys.argv) < 2:\n        raise RuntimeError(\n            "Bridge job path was not supplied."\n        )\n\n    JOB_PATH = os.path.abspath(\n        sys.argv[1]\n    )\n\n    with open(\n        JOB_PATH,\n        "r",\n        encoding="utf-8",\n    ) as stream:\n        JOB = json.load(stream)\n\n    create_setup()\n\n\ntry:\n    main()\nexcept Exception as error:\n    traceback.print_exc()\n\n    try:\n        if not JOB and len(sys.argv) >= 2:\n            with open(\n                sys.argv[1],\n                "r",\n                encoding="utf-8",\n            ) as stream:\n                JOB = json.load(stream)\n    except Exception:\n        pass\n\n    write_status(\n        "error",\n        str(error),\n        traceback=traceback.format_exc(),\n    )\n'
 
         with open(
@@ -10788,16 +11027,306 @@ class AssetManagerWidget(QtWidgets.QWidget):
         return safe_name or "Texture_Set"
 
     def marmoset_manifest_path(self) -> Optional[str]:
-        cache_dir = self.preview_cache_dir()
+        bridge_directory = self.marmoset_bridge_directory()
 
-        if not cache_dir:
+        if not bridge_directory:
             return None
 
         return os.path.join(
-            cache_dir,
-            "Marmoset",
+            bridge_directory,
             "_marmoset_bakes_manifest.json",
         )
+
+    def recover_saved_marmoset_scene_outputs(
+        self,
+    ) -> int:
+        """Organize raw maps baked after a saved .tbscene was reopened.
+
+        Opening a Toolbag scene directly restores the Baker output path but
+        does not restart the Python bridge callback.  Multiple Texture Sets
+        then writes files such as ``Interior_Cab_mat_N.png`` into the project
+        bake root.  Painter recognizes those exact job/set prefixes here and
+        moves only completed files into ``Cab_mat/Marmoset/Cab_mat_N.png``.
+        """
+        cache_dir = self.preview_cache_dir()
+        bridge_directory = self.marmoset_bridge_directory()
+
+        if (
+            not cache_dir
+            or not bridge_directory
+            or not os.path.isdir(cache_dir)
+        ):
+            return 0
+
+        job_path = os.path.join(
+            bridge_directory,
+            "marmoset_bridge_job.json",
+        )
+        job = {}
+
+        if os.path.isfile(job_path):
+            try:
+                with open(
+                    job_path,
+                    "r",
+                    encoding="utf-8",
+                ) as stream:
+                    job = json.load(stream)
+            except (
+                OSError,
+                json.JSONDecodeError,
+            ):
+                job = {}
+
+        status_path = os.path.join(
+            bridge_directory,
+            "marmoset_bridge_status.json",
+        )
+
+        if os.path.isfile(status_path):
+            try:
+                with open(
+                    status_path,
+                    "r",
+                    encoding="utf-8",
+                ) as stream:
+                    bridge_status = json.load(
+                        stream
+                    )
+
+                status_age = time.time() - float(
+                    bridge_status.get(
+                        "updated_at",
+                        0.0,
+                    )
+                    or 0.0
+                )
+
+                bridge_state = str(
+                    bridge_status.get(
+                        "state",
+                        "",
+                    )
+                ).lower()
+
+                if (
+                    (
+                        bridge_state == "waiting_suffix"
+                        and status_age < 900.0
+                    )
+                    or (
+                        bridge_state == "collecting_outputs"
+                        and status_age < 120.0
+                    )
+                ):
+                    return 0
+            except (
+                OSError,
+                json.JSONDecodeError,
+            ):
+                pass
+
+        project_path = str(
+            substance_painter.project.file_path()
+            or ""
+        )
+        output_base_name = str(
+            job.get("output_base_name")
+            or os.path.splitext(
+                os.path.basename(project_path)
+            )[0]
+        ).strip()
+        texture_set_names = [
+            str(name).strip()
+            for name in job.get(
+                "texture_set_names",
+                [],
+            )
+            if str(name).strip()
+        ]
+
+        if not texture_set_names:
+            texture_set_names = (
+                self.texture_set_names_for_bridge()
+            )
+
+        if not output_base_name or not texture_set_names:
+            return 0
+
+        try:
+            root_file_names = os.listdir(
+                cache_dir
+            )
+        except OSError:
+            return 0
+
+        moved = 0
+        resources = self._data.setdefault(
+            "resources",
+            {},
+        )
+        hidden_urls = set(
+            self._data.setdefault(
+                "hidden_resource_urls",
+                [],
+            )
+        )
+        deleted_urls = set(
+            self._data.setdefault(
+                "manually_deleted_resource_urls",
+                [],
+            )
+        )
+
+        # Longest names first prevents ``Body`` from taking files belonging
+        # to a Texture Set named ``Body_Details``.
+        texture_set_names.sort(
+            key=len,
+            reverse=True,
+        )
+
+        for file_name in root_file_names:
+            source_path = os.path.normpath(
+                os.path.join(
+                    cache_dir,
+                    file_name,
+                )
+            )
+
+            if not os.path.isfile(source_path):
+                continue
+
+            stem, extension = os.path.splitext(
+                file_name
+            )
+
+            if extension.lower() not in PREVIEW_EXTENSIONS:
+                continue
+
+            matched_set = ""
+            map_and_setup = ""
+
+            for texture_set_name in texture_set_names:
+                prefix = (
+                    output_base_name
+                    + "_"
+                    + texture_set_name
+                    + "_"
+                )
+
+                if stem.lower().startswith(
+                    prefix.lower()
+                ):
+                    matched_set = texture_set_name
+                    map_and_setup = stem[
+                        len(prefix):
+                    ].strip("._- ")
+                    break
+
+            if not matched_set or not map_and_setup:
+                continue
+
+            usage_name, _setup_name = (
+                self.marmoset_assignment_from_stem(
+                    matched_set
+                    + "_"
+                    + map_and_setup,
+                    matched_set,
+                )
+            )
+
+            if not usage_name:
+                continue
+
+            try:
+                # A raw map may be very large.  The live Toolbag worker uses a
+                # 3-second quiet interval, so give it priority.  If its scene
+                # callback was lost after reopening the .tbscene, Painter
+                # takes over on a later 2.5-second watcher pass.
+                if time.time() - os.path.getmtime(
+                    source_path
+                ) < 6.0:
+                    continue
+            except OSError:
+                continue
+
+            destination_directory = os.path.join(
+                cache_dir,
+                self.safe_external_folder_name(
+                    matched_set
+                ),
+                "Marmoset",
+            )
+            destination_path = os.path.normpath(
+                os.path.join(
+                    destination_directory,
+                    self.safe_external_folder_name(
+                        matched_set
+                    )
+                    + "_"
+                    + map_and_setup
+                    + extension.lower(),
+                )
+            )
+
+            try:
+                os.makedirs(
+                    destination_directory,
+                    exist_ok=True,
+                )
+                os.replace(
+                    source_path,
+                    destination_path,
+                )
+            except OSError:
+                # The source can still be locked briefly by Toolbag.
+                continue
+
+            normalized_source = os.path.normcase(
+                os.path.abspath(source_path)
+            )
+
+            for resource_url, record in list(
+                resources.items()
+            ):
+                record_path = record.get(
+                    "preview_path",
+                    "",
+                )
+
+                if (
+                    record_path
+                    and os.path.normcase(
+                        os.path.abspath(
+                            os.path.normpath(
+                                str(record_path)
+                            )
+                        )
+                    ) == normalized_source
+                ):
+                    resources.pop(
+                        resource_url,
+                        None,
+                    )
+                    hidden_urls.discard(
+                        resource_url
+                    )
+                    deleted_urls.discard(
+                        resource_url
+                    )
+
+            moved += 1
+
+        if moved:
+            self._data[
+                "hidden_resource_urls"
+            ] = sorted(hidden_urls)
+            self._data[
+                "manually_deleted_resource_urls"
+            ] = sorted(deleted_urls)
+            self._preview_cache.clear()
+
+        return moved
 
     def ensure_manager_folder_path(
         self,
@@ -10871,11 +11400,6 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 marmoset_root,
             )
 
-            # Root-level images are temporary Toolbag bake outputs.
-            # Only files inside a Texture Set subfolder are manager assets.
-            if relative_root in (".", ""):
-                continue
-
             relative_parts = [
                 part
                 for part in relative_root.replace(
@@ -10885,10 +11409,17 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 if part
             ]
 
-            if not relative_parts:
+            # Current layout: <Texture Set>/Marmoset/<Set>_<Map>.png.
+            # Keep reading the former Marmoset/<Texture Set> layout too.
+            if len(relative_parts) < 2:
                 continue
 
-            texture_set_name = relative_parts[0]
+            if relative_parts[1].lower() == "marmoset":
+                texture_set_name = relative_parts[0]
+            elif relative_parts[0].lower() == "marmoset":
+                texture_set_name = relative_parts[1]
+            else:
+                continue
 
             for file_name in file_names:
                 extension = os.path.splitext(
@@ -11001,9 +11532,10 @@ class AssetManagerWidget(QtWidgets.QWidget):
             and generation != stored_generation
         )
 
-        marmoset_root = os.path.dirname(
-            manifest_path
-        )
+        marmoset_root = self.preview_cache_dir()
+
+        if not marmoset_root:
+            return 0
         scanned_records, directory_signature = (
             self.scan_marmoset_output_files(
                 marmoset_root
@@ -11017,11 +11549,25 @@ class AssetManagerWidget(QtWidgets.QWidget):
             directory_signature
             != stored_signature
         )
+        needs_assignment_refresh = any(
+            record.get("source")
+            == "Marmoset Toolbag 5"
+            and (
+                not record.get("texture_set_name")
+                or not record.get("bake_usage")
+                or not record.get("bake_setup")
+            )
+            for record in self._data.get(
+                "resources",
+                {},
+            ).values()
+        )
 
         if (
             not force
             and not is_new_generation
             and not directory_changed
+            and not needs_assignment_refresh
         ):
             return 0
 
@@ -11300,10 +11846,35 @@ class AssetManagerWidget(QtWidgets.QWidget):
             record["source"] = (
                 "Marmoset Toolbag 5"
             )
+            self.update_marmoset_assignment_metadata(
+                record,
+                stem,
+                texture_set_name,
+            )
 
             resources[url] = record
             hidden_urls.discard(url)
             imported_count += 1
+
+        auto_assigned_count = 0
+
+        for resource_url, record in list(
+            resources.items()
+        ):
+            if (
+                record.get("source")
+                != "Marmoset Toolbag 5"
+                or not record.get("bake_usage")
+                or not record.get("bake_setup")
+            ):
+                continue
+
+            auto_assigned_count += (
+                self.auto_assign_bake_record_to_smart_material(
+                    record,
+                    source_url=resource_url,
+                )
+            )
 
         # Remove obsolete generated URLs, but retain current manual-deletion
         # markers for files that are still expected.
@@ -11350,6 +11921,12 @@ class AssetManagerWidget(QtWidgets.QWidget):
         self._preview_cache.clear()
         self.save_data()
         self.populate_asset_tiles()
+
+        if auto_assigned_count:
+            print(
+                "[BakeManager] Auto-assigned "
+                f"{auto_assigned_count} Marmoset layer source(s)."
+            )
 
         return imported_count
 
@@ -11472,13 +12049,18 @@ class AssetManagerWidget(QtWidgets.QWidget):
             bridge_directory,
             project_name + "_Bake.tbscene",
         )
-        output_directory = os.path.join(
-            cache_dir := self.preview_cache_dir(),
-            "Marmoset",
-        )
-        manifest_path = os.path.join(
+        output_directory = self.preview_cache_dir()
+        manifest_path = self.marmoset_manifest_path()
+
+        if not output_directory or not manifest_path:
+            self.status_label.setText(
+                "Save the Painter project before launching Toolbag."
+            )
+            return
+
+        raw_output_path = os.path.join(
             output_directory,
-            "_marmoset_bakes_manifest.json",
+            self.safe_external_folder_name(project_name) + ".png",
         )
 
         try:
@@ -11488,7 +12070,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             traceback.print_exc()
 
         job = {
-            "version": 1,
+            "version": 2,
             "painter_project": project_path,
             "baker_name": project_name + " Bake",
             "group_name": group_name,
@@ -11497,9 +12079,16 @@ class AssetManagerWidget(QtWidgets.QWidget):
             "scene_path": scene_path,
             "status_path": status_path,
             "output_directory": output_directory,
+            "output_root": output_directory,
+            "raw_output_path": raw_output_path,
             "manifest_path": manifest_path,
             "texture_set_names": texture_set_names,
             "output_base_name": project_name,
+            "suffix_history_path": os.path.join(
+                bridge_directory,
+                "marmoset_suffix_history.json",
+            ),
+            "launched_at": time.time(),
         }
 
         with open(
@@ -11538,6 +12127,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
             return
 
         self._marmoset_status_path = status_path
+        self._last_marmoset_status_update = None
         self._marmoset_status_timer.start()
 
         self.status_label.setText(
@@ -11563,6 +12153,15 @@ class AssetManagerWidget(QtWidgets.QWidget):
         state = str(
             status.get("state", "")
         ).lower()
+        status_update = status.get("updated_at")
+
+        if (
+            state == "baked"
+            and status_update == self._last_marmoset_status_update
+        ):
+            return
+
+        self._last_marmoset_status_update = status_update
         message = str(
             status.get("message", "")
         )
@@ -11651,7 +12250,9 @@ class AssetManagerWidget(QtWidgets.QWidget):
         if not accepted:
             return
 
-        name = name.strip().replace("/", "_").replace("\\", "_")
+        name = self.safe_disk_folder_name(
+            name.strip().replace("/", "_").replace("\\", "_")
+        )
 
         if not name:
             return
@@ -11674,12 +12275,47 @@ class AssetManagerWidget(QtWidgets.QWidget):
             )
             return
 
+        disk_directory = self.folder_disk_directory(
+            new_path
+        )
+
+        if not disk_directory:
+            QtWidgets.QMessageBox.information(
+                self,
+                "New Folder",
+                "Save the Painter project before creating folders.",
+            )
+            return
+
+        try:
+            os.makedirs(
+                disk_directory,
+                exist_ok=False,
+            )
+        except FileExistsError:
+            self.synchronize_disk_folders()
+            self.populate_asset_tiles()
+            QtWidgets.QMessageBox.information(
+                self,
+                "New Folder",
+                "This folder already exists on disk and was synchronized.",
+            )
+            return
+        except OSError:
+            traceback.print_exc()
+            QtWidgets.QMessageBox.warning(
+                self,
+                "New Folder",
+                "Could not create the folder on disk. See Python Console.",
+            )
+            return
+
         folders.append(new_path)
         self.save_data()
         self.populate_asset_tiles()
 
         self.status_label.setText(
-            f"Created folder: {name}"
+            f"Created folder on disk: {name}"
         )
 
     def rename_folder(self):
@@ -11688,97 +12324,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
         if not old_path:
             return
 
-        old_name = old_path.split("/")[-1]
-        parent_path = "/".join(old_path.split("/")[:-1])
-
-        new_name, accepted = QtWidgets.QInputDialog.getText(
-            self,
-            "Rename Folder",
-            "New name:",
-            text=old_name,
-        )
-
-        if not accepted:
-            return
-
-        new_name = (
-            new_name.strip()
-            .replace("/", "_")
-            .replace("\\", "_")
-        )
-
-        if not new_name or new_name == old_name:
-            return
-
-        new_path = (
-            new_name
-            if not parent_path
-            else parent_path + "/" + new_name
-        )
-
-        folders = self._data.get("folders", [])
-
-        if new_path in folders:
-            QtWidgets.QMessageBox.information(
-                self,
-                "Rename Folder",
-                "A folder with this name already exists.",
-            )
-            return
-
-        updated_folders = []
-
-        for folder in folders:
-            if folder == old_path:
-                updated_folders.append(new_path)
-
-            elif folder.startswith(old_path + "/"):
-                updated_folders.append(
-                    new_path + folder[len(old_path):]
-                )
-
-            else:
-                updated_folders.append(folder)
-
-        self._data["folders"] = updated_folders
-
-        folder_previews = self._data.setdefault(
-            "folder_previews",
-            {},
-        )
-
-        if old_path in folder_previews:
-            folder_previews[new_path] = folder_previews.pop(
-                old_path
-            )
-
-        for preview_folder in list(folder_previews):
-            if preview_folder.startswith(old_path + "/"):
-                migrated_preview_folder = (
-                    new_path
-                    + preview_folder[len(old_path):]
-                )
-                folder_previews[migrated_preview_folder] = (
-                    folder_previews.pop(preview_folder)
-                )
-
-        for record in self._data.get(
-            "resources",
-            {},
-        ).values():
-            folder = record.get("folder", "")
-
-            if folder == old_path:
-                record["folder"] = new_path
-
-            elif folder.startswith(old_path + "/"):
-                record["folder"] = (
-                    new_path + folder[len(old_path):]
-                )
-
-        self.save_data()
-        self._current_folder_path = parent_path
-        self.populate_asset_tiles()
+        self.rename_folder_path(old_path)
 
     def delete_folder(self):
         folder_path = self.current_folder_path()
@@ -11786,45 +12332,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
         if not folder_path:
             return
 
-        result = QtWidgets.QMessageBox.question(
-            self,
-            "Delete Folder",
-            (
-                f"Delete folder '{folder_path}'?\n\n"
-                "Resources inside it will be moved to "
-                "'Imported Textures'."
-            ),
-            QtWidgets.QMessageBox.StandardButton.Yes
-            | QtWidgets.QMessageBox.StandardButton.No,
-        )
-
-        if result != QtWidgets.QMessageBox.StandardButton.Yes:
-            return
-
-        self._data["folders"] = [
-            folder
-            for folder in self._data.get("folders", [])
-            if (
-                folder != folder_path
-                and not folder.startswith(folder_path + "/")
-            )
-        ]
-
-        for record in self._data.get(
-            "resources",
-            {},
-        ).values():
-            folder = record.get("folder", "")
-
-            if (
-                folder == folder_path
-                or folder.startswith(folder_path + "/")
-            ):
-                record["folder"] = DEFAULT_IMPORTED_FOLDER
-
-        self.save_data()
-        self._current_folder_path = parent_path
-        self.populate_asset_tiles()
+        self.delete_folder_path(folder_path)
 
     # ------------------------------------------------------------------
     # Asset context menu
@@ -12843,6 +13351,13 @@ class AssetManagerWidget(QtWidgets.QWidget):
             os.path.basename(new_path)
         )
 
+        if record.get("source") == "Marmoset Toolbag 5":
+            self.update_marmoset_assignment_metadata(
+                record,
+                new_stem,
+                texture_set_name,
+            )
+
         if pending_bindings:
             try:
                 new_resource_id = (
@@ -12944,6 +13459,17 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 self._data[
                     "manually_deleted_resource_urls"
                 ] = sorted(deleted_urls)
+
+        if (
+            record.get("source")
+            == "Marmoset Toolbag 5"
+            and record.get("bake_usage")
+            and record.get("bake_setup")
+        ):
+            self.auto_assign_bake_record_to_smart_material(
+                record,
+                source_url=resulting_url,
+            )
 
         return (
             True,
@@ -13715,9 +14241,11 @@ class AssetManagerWidget(QtWidgets.QWidget):
             return
 
         new_name = (
-            new_name.strip()
-            .replace("/", "_")
-            .replace("\\", "_")
+            self.safe_disk_folder_name(
+                new_name.strip()
+                .replace("/", "_")
+                .replace("\\", "_")
+            )
         )
 
         if not new_name or new_name == old_name:
@@ -13742,6 +14270,64 @@ class AssetManagerWidget(QtWidgets.QWidget):
             )
             return
 
+        old_disk_directory = self.folder_disk_directory(
+            old_path
+        )
+        new_disk_directory = self.folder_disk_directory(
+            new_path
+        )
+
+        if (
+            not old_disk_directory
+            or not new_disk_directory
+        ):
+            QtWidgets.QMessageBox.information(
+                self,
+                "Rename Folder",
+                "Save the Painter project before renaming folders.",
+            )
+            return
+
+        same_disk_path = (
+            os.path.normcase(
+                os.path.abspath(old_disk_directory)
+            )
+            == os.path.normcase(
+                os.path.abspath(new_disk_directory)
+            )
+        )
+
+        if (
+            os.path.exists(new_disk_directory)
+            and not same_disk_path
+        ):
+            QtWidgets.QMessageBox.information(
+                self,
+                "Rename Folder",
+                "A folder with this name already exists on disk.",
+            )
+            return
+
+        try:
+            if os.path.isdir(old_disk_directory):
+                os.rename(
+                    old_disk_directory,
+                    new_disk_directory,
+                )
+            else:
+                os.makedirs(
+                    new_disk_directory,
+                    exist_ok=False,
+                )
+        except OSError:
+            traceback.print_exc()
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Rename Folder",
+                "Could not rename the folder on disk. See Python Console.",
+            )
+            return
+
         updated_folders = []
 
         for folder in folders:
@@ -13758,10 +14344,34 @@ class AssetManagerWidget(QtWidgets.QWidget):
 
         self._data["folders"] = updated_folders
 
-        for record in self._data.get(
+        folder_previews = self._data.setdefault(
+            "folder_previews",
+            {},
+        )
+
+        for preview_folder in list(folder_previews):
+            if (
+                preview_folder == old_path
+                or preview_folder.startswith(old_path + "/")
+            ):
+                migrated_preview_folder = (
+                    new_path
+                    + preview_folder[len(old_path):]
+                )
+                folder_previews[migrated_preview_folder] = (
+                    folder_previews.pop(preview_folder)
+                )
+
+        renamed_file_paths = []
+        resource_url_changes = []
+        resources = self._data.setdefault(
             "resources",
             {},
-        ).values():
+        )
+
+        for resource_url, record in list(
+            resources.items()
+        ):
             record_folder = record.get(
                 "folder",
                 "",
@@ -13778,8 +14388,89 @@ class AssetManagerWidget(QtWidgets.QWidget):
                     + record_folder[len(old_path):]
                 )
 
+            preview_path = str(
+                record.get(
+                    "preview_path",
+                    "",
+                )
+            )
+
+            if (
+                preview_path
+                and self.path_is_inside(
+                    preview_path,
+                    old_disk_directory,
+                )
+            ):
+                migrated_path = os.path.normpath(
+                    os.path.join(
+                        new_disk_directory,
+                        os.path.relpath(
+                            preview_path,
+                            old_disk_directory,
+                        ),
+                    )
+                )
+                record["preview_path"] = migrated_path
+                renamed_file_paths.append(
+                    (
+                        preview_path,
+                        migrated_path,
+                    )
+                )
+
+                migrated_resource_url = resource_url
+
+                if str(resource_url).startswith("bakesetup+"):
+                    migrated_resource_url = (
+                        self.bake_setup_resource_url(
+                            migrated_path
+                        )
+                    )
+                elif str(resource_url).startswith("marmoset+"):
+                    migrated_resource_url = self.marmoset_resource_url(
+                        migrated_path
+                    )
+                elif str(resource_url).startswith("disk+"):
+                    migrated_resource_url = self.disk_resource_url(
+                        migrated_path
+                    )
+
+                if migrated_resource_url != resource_url:
+                    resource_url_changes.append(
+                        (
+                            resource_url,
+                            migrated_resource_url,
+                            record,
+                        )
+                    )
+
+        for old_url, new_url, record in resource_url_changes:
+            resources.pop(old_url, None)
+            resources[new_url] = record
+
+            for key in (
+                "hidden_resource_urls",
+                "manually_deleted_resource_urls",
+            ):
+                values = set(
+                    self._data.setdefault(key, [])
+                )
+
+                if old_url in values:
+                    values.discard(old_url)
+                    values.add(new_url)
+                    self._data[key] = sorted(values)
+
+        self.update_marmoset_manifest_file_paths(
+            renamed_file_paths
+        )
+
         self.save_data()
         self.populate_asset_tiles()
+        self.status_label.setText(
+            f"Renamed folder on disk: {new_name}"
+        )
 
     def delete_folder_path(
         self,
@@ -13788,14 +14479,62 @@ class AssetManagerWidget(QtWidgets.QWidget):
         if not folder_path:
             return
 
+        folders = self._data.get(
+            "folders",
+            [],
+        )
+        has_child_folders = any(
+            folder.startswith(folder_path + "/")
+            for folder in folders
+        )
+        has_resources = any(
+            (
+                str(record.get("folder", "")) == folder_path
+                or str(record.get("folder", "")).startswith(
+                    folder_path + "/"
+                )
+            )
+            for record in self._data.get(
+                "resources",
+                {},
+            ).values()
+        )
+        disk_directory = self.folder_disk_directory(
+            folder_path
+        )
+        disk_not_empty = False
+
+        if (
+            disk_directory
+            and os.path.isdir(disk_directory)
+        ):
+            try:
+                with os.scandir(disk_directory) as entries:
+                    disk_not_empty = bool(
+                        next(entries, None)
+                    )
+            except OSError:
+                disk_not_empty = True
+
+        if (
+            has_child_folders
+            or has_resources
+            or disk_not_empty
+        ):
+            QtWidgets.QMessageBox.information(
+                self,
+                "Delete Folder",
+                (
+                    "The folder is not empty. Move its textures and delete "
+                    "its child folders first. No files were deleted."
+                ),
+            )
+            return
+
         result = QtWidgets.QMessageBox.question(
             self,
             "Delete Folder",
-            (
-                f"Delete folder '{folder_path}'?\n\n"
-                "Textures inside it will be moved to "
-                "the current parent folder."
-            ),
+            f"Delete empty folder '{folder_path}' from Bake Manager and disk?",
             QtWidgets.QMessageBox.StandardButton.Yes
             | QtWidgets.QMessageBox.StandardButton.No,
         )
@@ -13806,6 +14545,21 @@ class AssetManagerWidget(QtWidgets.QWidget):
         parent_path = "/".join(
             folder_path.split("/")[:-1]
         )
+
+        if (
+            disk_directory
+            and os.path.isdir(disk_directory)
+        ):
+            try:
+                os.rmdir(disk_directory)
+            except OSError:
+                traceback.print_exc()
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Delete Folder",
+                    "Could not delete the empty folder on disk.",
+                )
+                return
 
         self._data["folders"] = [
             folder
@@ -13850,32 +14604,51 @@ class AssetManagerWidget(QtWidgets.QWidget):
                     except OSError:
                         traceback.print_exc()
 
-        for record in self._data.get(
-            "resources",
-            {},
-        ).values():
-            record_folder = record.get(
-                "folder",
-                "",
-            )
-
-            if (
-                record_folder == folder_path
-                or record_folder.startswith(
-                    folder_path + "/"
-                )
-            ):
-                record["folder"] = parent_path
-
         self.save_data()
+        self._current_folder_path = parent_path
         self.populate_asset_tiles()
+        self.status_label.setText(
+            "Deleted empty folder from disk."
+        )
 
     def move_items_to_folder(
         self,
         items: list[QtWidgets.QListWidgetItem],
         folder_path: str,
     ):
+        folder_path = self.normalize_folder_path(
+            folder_path
+        )
+        target_directory = self.folder_disk_directory(
+            folder_path
+        )
+
+        if not target_directory:
+            self.status_label.setText(
+                "Save the Painter project before moving textures."
+            )
+            return
+
+        try:
+            os.makedirs(
+                target_directory,
+                exist_ok=True,
+            )
+        except OSError:
+            traceback.print_exc()
+            self.status_label.setText(
+                "Could not create the target folder on disk."
+            )
+            return
+
+        cache_dir = self.preview_cache_dir()
+        resources = self._data.setdefault(
+            "resources",
+            {},
+        )
         moved = 0
+        skipped = 0
+        renamed_file_paths = []
 
         for item in items:
             if item.data(ROLE_KIND) != KIND_RESOURCE:
@@ -13884,24 +14657,120 @@ class AssetManagerWidget(QtWidgets.QWidget):
             url = item.data(
                 ROLE_RESOURCE_URL
             )
-            record = self._data.get(
-                "resources",
-                {},
-            ).get(url)
+            record = resources.get(url)
 
             if record is None:
                 continue
+
+            preview_path = str(
+                record.get(
+                    "preview_path",
+                    "",
+                )
+            )
+            managed_file = bool(
+                cache_dir
+                and preview_path
+                and os.path.isfile(preview_path)
+                and self.path_is_inside(
+                    preview_path,
+                    cache_dir,
+                )
+            )
+
+            if managed_file:
+                old_path = os.path.normpath(
+                    preview_path
+                )
+                new_path = os.path.normpath(
+                    os.path.join(
+                        target_directory,
+                        os.path.basename(old_path),
+                    )
+                )
+
+                if (
+                    os.path.normcase(os.path.abspath(old_path))
+                    != os.path.normcase(os.path.abspath(new_path))
+                    and os.path.exists(new_path)
+                ):
+                    skipped += 1
+                    continue
+
+                physical_move, resulting_url = (
+                    self.move_generated_texture_with_relink(
+                        url,
+                        record,
+                        old_path,
+                        new_path,
+                    )
+                )
+
+                if (
+                    os.path.normcase(os.path.abspath(old_path))
+                    != os.path.normcase(os.path.abspath(new_path))
+                    and not physical_move
+                ):
+                    skipped += 1
+                    continue
+
+                if str(url).startswith("marmoset+"):
+                    resulting_url = self.marmoset_resource_url(
+                        new_path
+                    )
+                elif str(url).startswith("disk+"):
+                    resulting_url = self.disk_resource_url(
+                        new_path
+                    )
+
+                if resulting_url != url:
+                    resources.pop(url, None)
+                    resources[resulting_url] = record
+
+                    for key in (
+                        "hidden_resource_urls",
+                        "manually_deleted_resource_urls",
+                    ):
+                        values = set(
+                            self._data.setdefault(key, [])
+                        )
+
+                        if url in values:
+                            values.discard(url)
+                            values.add(resulting_url)
+                            self._data[key] = sorted(values)
+
+                if physical_move:
+                    renamed_file_paths.append(
+                        (
+                            old_path,
+                            new_path,
+                        )
+                    )
 
             record["folder"] = folder_path
             moved += 1
 
         if moved:
+            self.update_marmoset_manifest_file_paths(
+                renamed_file_paths
+            )
+            self._preview_cache.clear()
             self.save_data()
             self.populate_asset_tiles()
-            self.status_label.setText(
-                f"Moved {moved} texture(s) to "
-                f"{folder_path.split('/')[-1]}"
+
+        status = (
+            f"Moved {moved} texture(s) to "
+            f"{folder_path.split('/')[-1]}"
+        )
+
+        if skipped:
+            status += (
+                f"; skipped {skipped} because a file with the same name "
+                "already exists or could not be moved"
             )
+
+        self.status_label.setText(status)
 
     def rename_asset_alias(
         self,
@@ -14533,7 +15402,377 @@ class AssetManagerWidget(QtWidgets.QWidget):
             ". "
         )
 
+        reserved_names = {
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            *(f"COM{index}" for index in range(1, 10)),
+            *(f"LPT{index}" for index in range(1, 10)),
+        }
+
+        if safe_name.upper() in reserved_names:
+            safe_name = "_" + safe_name
+
         return safe_name or "Texture_Set"
+
+    @staticmethod
+    def path_is_inside(
+        path: str,
+        root: str,
+    ) -> bool:
+        """Return True only when path is inside root (or is root itself)."""
+        try:
+            return os.path.normcase(
+                os.path.commonpath(
+                    (
+                        os.path.abspath(path),
+                        os.path.abspath(root),
+                    )
+                )
+            ) == os.path.normcase(
+                os.path.abspath(root)
+            )
+        except (OSError, ValueError):
+            return False
+
+    def folder_disk_directory(
+        self,
+        folder_path: str,
+    ) -> Optional[str]:
+        """Map a manager folder to its directory below <project>_Bakes."""
+        cache_dir = self.preview_cache_dir()
+
+        if not cache_dir:
+            return None
+
+        normalized = self.normalize_folder_path(
+            folder_path
+        )
+        parts = [
+            self.safe_disk_folder_name(part)
+            for part in normalized.split("/")
+            if part
+        ]
+        target = os.path.normpath(
+            os.path.join(cache_dir, *parts)
+            if parts
+            else cache_dir
+        )
+
+        if not self.path_is_inside(target, cache_dir):
+            return None
+
+        return target
+
+    def synchronize_disk_folders(self) -> int:
+        """Add folders created in Explorer to Bake Manager's folder list."""
+        cache_dir = self.preview_cache_dir()
+
+        if (
+            not cache_dir
+            or not os.path.isdir(cache_dir)
+        ):
+            return 0
+
+        ignored_root_directories = {
+            "_folderpreviews",
+            "_marmosetbridge",
+            "_painterexporttemp",
+            "marmoset",
+        }
+        folders = self._data.setdefault(
+            "folders",
+            [],
+        )
+        known = {
+            self.normalize_folder_path(folder).lower()
+            for folder in folders
+        }
+        discovered = 0
+
+        for root, directory_names, _file_names in os.walk(
+            cache_dir
+        ):
+            if os.path.normcase(root) == os.path.normcase(
+                cache_dir
+            ):
+                directory_names[:] = [
+                    name
+                    for name in directory_names
+                    if name.lower() not in ignored_root_directories
+                ]
+
+            for directory_name in directory_names:
+                disk_path = os.path.join(
+                    root,
+                    directory_name,
+                )
+                relative_path = os.path.relpath(
+                    disk_path,
+                    cache_dir,
+                )
+                manager_path = self.normalize_folder_path(
+                    relative_path
+                )
+
+                if (
+                    not manager_path
+                    or manager_path.lower() in known
+                ):
+                    continue
+
+                folders.append(manager_path)
+                known.add(manager_path.lower())
+                discovered += 1
+
+        if discovered:
+            folders.sort(key=str.lower)
+
+        return discovered
+
+    @staticmethod
+    def disk_resource_url(file_path: str) -> str:
+        local_url = QtCore.QUrl.fromLocalFile(
+            os.path.abspath(file_path)
+        ).toString(
+            QtCore.QUrl.ComponentFormattingOption.FullyEncoded
+        )
+        return "disk+" + local_url
+
+    def manager_folder_for_disk_file(
+        self,
+        file_path: str,
+    ) -> str:
+        cache_dir = self.preview_cache_dir()
+
+        if (
+            not cache_dir
+            or not self.path_is_inside(file_path, cache_dir)
+        ):
+            return ""
+
+        relative_directory = os.path.relpath(
+            os.path.dirname(file_path),
+            cache_dir,
+        )
+
+        if relative_directory == ".":
+            return ""
+
+        return self.normalize_folder_path(
+            relative_directory
+        )
+
+    def synchronize_managed_disk_files(self) -> int:
+        """Discover images and repair paths changed directly in Explorer."""
+        cache_dir = self.preview_cache_dir()
+
+        if (
+            not cache_dir
+            or not os.path.isdir(cache_dir)
+        ):
+            return 0
+
+        ignored_root_directories = {
+            "_folderpreviews",
+            "_marmosetbridge",
+            "_painterexporttemp",
+            "marmoset",
+        }
+        disk_files = []
+
+        for root, directory_names, file_names in os.walk(
+            cache_dir
+        ):
+            if os.path.normcase(root) == os.path.normcase(
+                cache_dir
+            ):
+                directory_names[:] = [
+                    name
+                    for name in directory_names
+                    if name.lower() not in ignored_root_directories
+                ]
+
+            relative_root_parts = [
+                part
+                for part in os.path.relpath(
+                    root,
+                    cache_dir,
+                ).replace("\\", "/").split("/")
+                if part not in ("", ".")
+            ]
+
+            if (
+                len(relative_root_parts) >= 2
+                and relative_root_parts[1].lower() == "marmoset"
+            ):
+                continue
+
+            for file_name in file_names:
+                if os.path.splitext(file_name)[1].lower() not in (
+                    PREVIEW_EXTENSIONS
+                ):
+                    continue
+
+                disk_files.append(
+                    os.path.normpath(
+                        os.path.join(root, file_name)
+                    )
+                )
+
+        resources = self._data.setdefault(
+            "resources",
+            {},
+        )
+        files_by_name = {}
+
+        for file_path in disk_files:
+            files_by_name.setdefault(
+                os.path.basename(file_path).lower(),
+                [],
+            ).append(file_path)
+
+        claimed_paths = {
+            os.path.normcase(
+                os.path.abspath(str(record.get("preview_path", "")))
+            )
+            for record in resources.values()
+            if (
+                record.get("preview_path")
+                and os.path.isfile(
+                    str(record.get("preview_path"))
+                )
+            )
+        }
+        url_changes = []
+        reconnected_file_paths = []
+        synchronized = 0
+
+        # If a known file was moved in Explorer, reconnect it when its file
+        # name is unique inside the managed root.
+        for resource_url, record in list(resources.items()):
+            old_path = str(
+                record.get(
+                    "preview_path",
+                    "",
+                )
+            )
+
+            if (
+                not old_path
+                or os.path.isfile(old_path)
+                or not self.path_is_inside(old_path, cache_dir)
+            ):
+                continue
+
+            candidates = [
+                candidate
+                for candidate in files_by_name.get(
+                    os.path.basename(old_path).lower(),
+                    [],
+                )
+                if os.path.normcase(
+                    os.path.abspath(candidate)
+                ) not in claimed_paths
+            ]
+
+            if len(candidates) != 1:
+                continue
+
+            new_path = candidates[0]
+            record["preview_path"] = new_path
+            record["exported_file_name"] = os.path.basename(
+                new_path
+            )
+            record["folder"] = self.manager_folder_for_disk_file(
+                new_path
+            )
+            reconnected_file_paths.append(
+                (
+                    old_path,
+                    new_path,
+                )
+            )
+            claimed_paths.add(
+                os.path.normcase(os.path.abspath(new_path))
+            )
+            new_url = resource_url
+
+            if str(resource_url).startswith("bakesetup+"):
+                new_url = self.bake_setup_resource_url(new_path)
+            elif str(resource_url).startswith("marmoset+"):
+                new_url = self.marmoset_resource_url(new_path)
+            elif str(resource_url).startswith("disk+"):
+                new_url = self.disk_resource_url(new_path)
+
+            if new_url != resource_url:
+                url_changes.append(
+                    (
+                        resource_url,
+                        new_url,
+                        record,
+                    )
+                )
+
+            synchronized += 1
+
+        for old_url, new_url, record in url_changes:
+            resources.pop(old_url, None)
+            resources[new_url] = record
+
+            for key in (
+                "hidden_resource_urls",
+                "manually_deleted_resource_urls",
+            ):
+                values = set(
+                    self._data.setdefault(key, [])
+                )
+
+                if old_url in values:
+                    values.discard(old_url)
+                    values.add(new_url)
+                    self._data[key] = sorted(values)
+
+        self.update_marmoset_manifest_file_paths(
+            reconnected_file_paths
+        )
+
+        # Images copied into the managed root become usable disk-backed tiles.
+        for file_path in disk_files:
+            normalized_file_path = os.path.normcase(
+                os.path.abspath(file_path)
+            )
+
+            if normalized_file_path in claimed_paths:
+                continue
+
+            stem = os.path.splitext(
+                os.path.basename(file_path)
+            )[0]
+            resource_url = self.disk_resource_url(
+                file_path
+            )
+            resources[resource_url] = {
+                "original_name": stem,
+                "alias": stem,
+                "folder": self.manager_folder_for_disk_file(
+                    file_path
+                ),
+                "type": self.detect_resource_type(stem),
+                "preview_path": file_path,
+                "exported_file_name": os.path.basename(file_path),
+                "source": "Bake Manager Disk",
+                "painter_active": False,
+                "available": True,
+            }
+            claimed_paths.add(normalized_file_path)
+            synchronized += 1
+
+        if synchronized:
+            self._preview_cache.clear()
+
+        return synchronized
 
     def texture_set_disk_directory(
         self,
@@ -14715,7 +15954,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
     def organize_generated_files_on_disk(
         self,
     ) -> int:
-        """Mirror Bake Manager's Texture Set folders on disk.
+        """Mirror Bake Manager's managed folders on disk.
 
         Only generated Painter/Bake Setup maps are moved. Service files,
         imported user textures and the Marmoset bridge workspace are left
@@ -14830,10 +16069,20 @@ class AssetManagerWidget(QtWidgets.QWidget):
             if not texture_set_name:
                 continue
 
-            target_directory = (
-                self.texture_set_disk_directory(
+            manager_folder = self.normalize_folder_path(
+                record.get(
+                    "folder",
+                    "",
+                )
+            )
+
+            if not manager_folder:
+                manager_folder = self.texture_set_folder_path(
                     texture_set_name
                 )
+
+            target_directory = self.folder_disk_directory(
+                manager_folder
             )
 
             if not target_directory:
@@ -15128,11 +16377,21 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 )
 
                 # Automatically organize every freshly baked map into the
-                # folder belonging to its Painter Texture Set.
+                # folder belonging to its Painter Texture Set. If the user
+                # already moved the map into a managed subfolder, preserve it.
                 texture_set_folder = self.texture_set_folder_path(
                     texture_set_name
                 )
-                record["folder"] = texture_set_folder
+                existing_folder = self.normalize_folder_path(
+                    record.get(
+                        "folder",
+                        "",
+                    )
+                )
+                record["folder"] = (
+                    existing_folder
+                    or texture_set_folder
+                )
                 record["texture_set_name"] = texture_set_name
 
                 created_texture_set_folders.add(
@@ -15185,6 +16444,8 @@ class AssetManagerWidget(QtWidgets.QWidget):
 
                 matched += 1
 
+        self.organize_generated_files_on_disk()
+        self.synchronize_disk_folders()
         self._preview_cache.clear()
         self.save_data()
         self.populate_asset_tiles()
@@ -15236,6 +16497,7 @@ class AssetManagerWidget(QtWidgets.QWidget):
         export_module,
         cache_dir: str,
         targets: dict[str, tuple[str, str]],
+        output_name_suffix: Optional[str] = None,
     ) -> dict[tuple[str, str], str]:
         """Export the requested mesh maps as small PNGs.
 
@@ -15380,11 +16642,24 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 ):
                     continue
 
+                organized_file_name = os.path.basename(
+                    exported_path
+                )
+
+                if output_name_suffix:
+                    organized_stem, organized_extension = (
+                        os.path.splitext(organized_file_name)
+                    )
+                    organized_file_name = (
+                        organized_stem
+                        + "_"
+                        + self.safe_bake_name(output_name_suffix)
+                        + organized_extension
+                    )
+
                 organized_path = os.path.join(
                     target_directory,
-                    os.path.basename(
-                        exported_path
-                    ),
+                    organized_file_name,
                 )
 
                 try:
@@ -15437,6 +16712,12 @@ class AssetManagerWidget(QtWidgets.QWidget):
                 continue
 
             expected_stem = texture_set_name + "_" + file_suffix
+
+            if output_name_suffix:
+                expected_stem += (
+                    "_"
+                    + self.safe_bake_name(output_name_suffix)
+                )
 
             for file_path in files_by_set.get(texture_set_name, []):
                 file_stem = os.path.splitext(
@@ -15999,7 +17280,22 @@ class AssetManagerWidget(QtWidgets.QWidget):
 
             return
 
-        self.import_marmoset_manifest()
+        recovered_marmoset = (
+            self.recover_saved_marmoset_scene_outputs()
+        )
+        imported_marmoset = (
+            self.import_marmoset_manifest(
+                force=bool(recovered_marmoset)
+            )
+        )
+
+        if recovered_marmoset:
+            self.status_label.setText(
+                "Recovered "
+                f"{recovered_marmoset} map(s) from a saved "
+                ".tbscene; imported "
+                f"{imported_marmoset}."
+            )
 
         try:
             project_is_busy = bool(

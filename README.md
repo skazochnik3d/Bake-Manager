@@ -214,6 +214,13 @@ Fix/Local/01
 The `1.0.6` development source is tracked through normal commits on `main`.
 Publishing source commits does not create a tag or GitHub Release automatically.
 
+## Contributors
+
+- **Pavel Rasskazchikov** ([@skazochnik3d](https://github.com/skazochnik3d)) — creator and maintainer.
+- **OpenAI Codex (ChatGPT)** — AI-assisted implementation, debugging, testing, and documentation.
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for attribution details.
+
 ## License
 
 No license has been selected yet. Until a license is added, redistribution and modification rights are not automatically granted. Add a `LICENSE` file before wider public distribution.

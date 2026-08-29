@@ -9,7 +9,7 @@ It is designed primarily for vehicles and other complex assets that use several 
 
 ## Features
 
-### Batch Bake Setups
+### Batch Bake Setups.
 
 - Save multiple reusable baking configurations as **Setups**.
 - Open a saved Setup with **Change Settings**, edit it in Painter's Baking

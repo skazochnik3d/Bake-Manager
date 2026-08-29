@@ -4,7 +4,7 @@
 
 It is designed primarily for vehicles and other complex assets that use several Texture Sets and require repeated Base, Skew, Local, Cage, Fix, and other bake passes.
 
-> Current development version: **1.0.6**
+> Current development version: **1.0.30**
 > Developed and tested primarily with **Substance 3D Painter 11.1.3** on Windows.
 
 ## Features

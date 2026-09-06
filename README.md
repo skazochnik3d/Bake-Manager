@@ -26,12 +26,17 @@ Browse textures and folders using clear thumbnails and organized previews.
 <p align="center">
   <img
     src="https://github.com/user-attachments/assets/b34abf2d-74b8-4898-8e9d-b86b305e7b50"
-    alt="Bake Manager demonstration"
+    alt="Better Visuals"
     width="2064"
   >
 </p>
 
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
 https://github.com/user-attachments/assets/627c906f-ecd7-4731-a42e-57e98549a389
+
+</details>
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Naming
 

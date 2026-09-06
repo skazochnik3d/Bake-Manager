@@ -17,13 +17,13 @@ It is designed primarily for vehicles and other complex assets that use several 
 https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 ## Better Visual
-<img width="2064" height="864" alt="Image" src="https://github.com/user-attachments/assets/a9b6e8c6-4ebb-48f1-b9a9-0ab52d21e287" />
+https://github.com/user-attachments/assets/f9f0651e-f588-4c8a-829e-7f40fd10f70d
 
 ## Autorenaming
-<img width="3440" height="1440" alt="Image" src="https://github.com/user-attachments/assets/d5143e07-c880-4b85-83a4-a27c310947bf" />
+https://github.com/user-attachments/assets/1471137a-b05b-4209-baf7-2b287b6dae38
 
 ## Autoassign maps
-<img width="2064" height="864" alt="Image" src="https://github.com/user-attachments/assets/cc0b7cfc-88de-4a97-bbae-900dfc8865a5" />
+https://github.com/user-attachments/assets/8047a5b4-737d-459d-9f11-11033a88ae36
 
 ## Smart Material
 https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1a3deff06af

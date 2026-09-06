@@ -23,13 +23,15 @@ A quick overview of the complete Bake Manager workflow.
 
 Browse textures and folders using clear thumbnails and organized previews.
 
-<a href="https://github.com/user-attachments/assets/37cd2868-260d-4115-9282-60fc53894ab3">
+<p align="center">
   <img
-    src="https://github.com/user-attachments/assets/37cd2868-260d-4115-9282-60fc53894ab3"
+    src="https://github.com/user-attachments/assets/b34abf2d-74b8-4898-8e9d-b86b305e7b50"
     alt="Bake Manager demonstration"
     width="2064"
   >
-</a>
+</p>
+
+https://github.com/user-attachments/assets/627c906f-ecd7-4731-a42e-57e98549a389
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Naming
 

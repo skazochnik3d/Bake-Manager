@@ -35,13 +35,25 @@ Browse textures and folders using clear thumbnails and organized previews.
 
 Automatically name baked maps using their Texture Set, map type, and Setup.
 
-[https://github.com/user-attachments/assets/1471137a-b05b-4209-baf7-2b287b6dae38](https://github.com/user-attachments/assets/1471137a-b05b-4209-baf7-2b287b6dae38)
+<a href="https://github.com/user-attachments/assets/17ee90fc-6cfe-4506-bff4-52ab5bfa2e75">
+  <img
+    src="https://github.com/user-attachments/assets/17ee90fc-6cfe-4506-bff4-52ab5bfa2e75"
+    alt="Bake Manager demonstration"
+    width="3440"
+  >
+</a>
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Map Assignment
 
 Automatically assign baked maps to the matching layers and Texture Sets.
 
-[https://github.com/user-attachments/assets/8047a5bchips4-737d-459d-9f11-11033a88ae36](https://github.com/user-attachments/assets/8047a5b4-737d-459d-9f11-11033a88ae36)
+<a href="https://github.com/user-attachments/assets/a54e3222-543a-41fb-a7d5-b31ab11840b7">
+  <img
+    src="https://github.com/user-attachments/assets/a54e3222-543a-41fb-a7d5-b31ab11840b7"
+    alt="Bake Manager demonstration"
+    width="2064"
+  >
+</a>
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
 

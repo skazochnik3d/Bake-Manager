@@ -1,3 +1,11 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/Logo_Dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/Logo_Light.svg">
+    <img alt="Bake Manager" src="docs/Logo_Light.svg" width="890">
+  </picture>
+</p>
+
 # Bake Manager
 
 **Bake Manager** is a production plugin for **Adobe Substance 3D Painter** that automates multi-Texture-Set mesh-map baking, file organization, layer assignment, reusable bake setups, Smart Materials, and a Marmoset Toolbag bridge.

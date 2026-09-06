@@ -13,7 +13,7 @@ It is designed primarily for vehicles and other complex assets that use several 
 
 > Developed and tested with **Substance 3D Painter 11.1.3** on Windows.
 
-##How it's works?
+## How it's works?
 https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 ## Better Visual
@@ -22,16 +22,16 @@ https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 ## Autorenaming
 <img width="3440" height="1440" alt="Image" src="https://github.com/user-attachments/assets/d5143e07-c880-4b85-83a4-a27c310947bf" />
 
-##Autoassign maps
+## Autoassign maps
 <img width="2064" height="864" alt="Image" src="https://github.com/user-attachments/assets/cc0b7cfc-88de-4a97-bbae-900dfc8865a5" />
 
-##Smart Material
+## Smart Material
 https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1a3deff06af
 
-##Projects and Setups
+## Projects and Setups
 https://github.com/user-attachments/assets/1b635dd1-c169-47e9-b2f0-869359585c92
 
-##Marmoset Bridge
+## Marmoset Bridge
 https://github.com/user-attachments/assets/5686078b-1b1e-48e3-b885-8f2935c2eb6d
 
 https://github.com/user-attachments/assets/c6e1bf49-cc4c-40f3-8850-662e934e859b
@@ -43,8 +43,6 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
 ```text
 C:\Users\<User>\Documents\Adobe\Adobe Substance 3D Painter\python\plugins\
 ```
-
-## Recommended Setup naming
 
 ## Contributors
 

@@ -13,43 +13,43 @@ It is designed primarily for vehicles and other complex assets that use several 
 
 > Developed and tested with **Substance 3D Painter 11.1.3** on Windows.
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />How It Works
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> How It Works
 
 A quick overview of the complete Bake Manager workflow.
 
 [https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79](https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Better Visuals
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Better Visuals
 
 Browse textures and folders using clear thumbnails and organized previews.
 
 [https://github.com/user-attachments/assets/f9f0651e-f588-4c8a-829e-7f40fd10f70d](https://github.com/user-attachments/assets/f9f0651e-f588-4c8a-829e-7f40fd10f70d)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Automatic Naming
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Naming
 
 Automatically name baked maps using their Texture Set, map type, and Setup.
 
 [https://github.com/user-attachments/assets/1471137a-b05b-4209-baf7-2b287b6dae38](https://github.com/user-attachments/assets/1471137a-b05b-4209-baf7-2b287b6dae38)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Automatic Map Assignment
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Map Assignment
 
 Automatically assign baked maps to the matching layers and Texture Sets.
 
 [https://github.com/user-attachments/assets/8047a5bchips4-737d-459d-9f11-11033a88ae36](https://github.com/user-attachments/assets/8047a5b4-737d-459d-9f11-11033a88ae36)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Smart Materials
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
 
 Create, save, and apply reusable Smart Materials across Texture Sets.
 
 [https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1anth3deff06af](https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1a3deff06af)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Projects and Setups
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Projects and Setups
 
 Organize reusable baking configurations into Projects and Setups.
 
 [https://github.com/user-attachments/assets/1b635dd1-c169-47e9-b2f0-869359585c92](https://github.com/user-attachments/assets/1b635dd1-c169-47e9-b2f0-869359585c92)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Marmoset Bridge
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Marmoset Bridge
 
 Send meshes and settings to Marmoset Toolbag, then organize and return the baked maps to Painter.
 
@@ -57,7 +57,7 @@ Send meshes and settings to Marmoset Toolbag, then organize and return the baked
 
 [https://github.com/user-attachments/assets/c6e1bf49-cc4c-40f3-8850-662e934e859b](https://github.com/user-attachments/assets/c6e1bf49-cc4c-40f3-8850-662e934e859b)
 
-## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />Installation
+## <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Installation
 https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
 
 ```text

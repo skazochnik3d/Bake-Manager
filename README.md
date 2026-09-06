@@ -17,7 +17,20 @@ It is designed primarily for vehicles and other complex assets that use several 
 
 A quick overview of the complete Bake Manager workflow.
 
-[https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79](https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79)
+<p align="center">
+  <img
+    src="https://github.com/user-attachments/assets/1b7298db-64d5-4c95-a4b4-1052879ffecb"
+    alt="Bake Manager demonstration"
+    width="1238"
+  >
+</p>
+
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
+https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
+
+</details>
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Better Visuals
 

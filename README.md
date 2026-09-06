@@ -6,9 +6,8 @@
   </picture>
 </p>
 
-# Bake Manager
 
-**Bake Manager** is a production plugin for **Adobe Substance 3D Painter** that automates multi-Texture-Set mesh-map baking, file organization, layer assignment, reusable bake setups, Smart Materials, and a Marmoset Toolbag bridge.
+<img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />**Bake Manager**<img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> is a production plugin for **Adobe Substance 3D Painter** that automates multi-Texture-Set mesh-map baking, file organization, layer assignment, reusable bake setups, Smart Materials, and a Marmoset Toolbag bridge.
 
 It is designed primarily for vehicles and other complex assets that use several Texture Sets and require repeated Base, Skew, Local, Cage, Fix, and other bake passes.
 

@@ -70,13 +70,6 @@ https://github.com/user-attachments/assets/d6a2e256-ad3f-4d47-b848-5819fe839b52
 
 </details>
 
-<details>
-<summary><strong>▶ Watch the full video</strong></summary>
-
-https://github.com/user-attachments/assets/17ee90fc-6cfe-4506-bff4-52ab5bfa2e75
-
-</details>
-
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Map Assignment
 
 Automatically assign baked maps to the matching layers and Texture Sets.
@@ -93,13 +86,6 @@ Automatically assign baked maps to the matching layers and Texture Sets.
 <summary><strong>▶ Watch the full video</strong></summary>
 
 https://github.com/user-attachments/assets/6edfc395-be75-4535-9fd3-a2e0aab5d75a
-
-</details>
-
-<details>
-<summary><strong>▶ Watch the full video</strong></summary>
-
-https://github.com/user-attachments/assets/a54e3222-543a-41fb-a7d5-b31ab11840b7
 
 </details>
 

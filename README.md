@@ -55,25 +55,39 @@ https://github.com/user-attachments/assets/627c906f-ecd7-4731-a42e-57e98549a389
 
 Automatically name baked maps using their Texture Set, map type, and Setup.
 
-<a href="https://github.com/user-attachments/assets/17ee90fc-6cfe-4506-bff4-52ab5bfa2e75">
+<p align="center">
   <img
-    src="https://github.com/user-attachments/assets/17ee90fc-6cfe-4506-bff4-52ab5bfa2e75"
+    src="https://github.com/user-attachments/assets/68fa04d3-dc5b-4e97-8f90-f375eed63f6b"
     alt="Bake Manager demonstration"
-    width="3440"
+    width="100%"
   >
-</a>
+</p>
+
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
+https://github.com/user-attachments/assets/17ee90fc-6cfe-4506-bff4-52ab5bfa2e75
+
+</details>
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Map Assignment
 
 Automatically assign baked maps to the matching layers and Texture Sets.
 
-<a href="https://github.com/user-attachments/assets/a54e3222-543a-41fb-a7d5-b31ab11840b7">
+<p align="center">
   <img
-    src="https://github.com/user-attachments/assets/a54e3222-543a-41fb-a7d5-b31ab11840b7"
+    src="https://github.com/user-attachments/assets/90319725-5768-4588-a5cf-6c9b0ed1dfb7"
     alt="Bake Manager demonstration"
-    width="2064"
+    width="100%"
   >
-</a>
+</p>
+
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
+https://github.com/user-attachments/assets/a54e3222-543a-41fb-a7d5-b31ab11840b7
+
+</details>
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
 

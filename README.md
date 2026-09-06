@@ -57,11 +57,18 @@ Automatically name baked maps using their Texture Set, map type, and Setup.
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/68fa04d3-dc5b-4e97-8f90-f375eed63f6b"
+    src="https://github.com/user-attachments/assets/22a0654c-51fe-487f-bcf5-ce0df9d3fd6a"
     alt="Bake Manager demonstration"
-    width="100%"
+    width="3440"
   >
 </p>
+
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
+https://github.com/user-attachments/assets/d6a2e256-ad3f-4d47-b848-5819fe839b52
+
+</details>
 
 <details>
 <summary><strong>▶ Watch the full video</strong></summary>
@@ -76,11 +83,18 @@ Automatically assign baked maps to the matching layers and Texture Sets.
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/90319725-5768-4588-a5cf-6c9b0ed1dfb7"
+    src="https://github.com/user-attachments/assets/799083bb-65fb-445d-b282-f5f26ff14bd2"
     alt="Bake Manager demonstration"
-    width="100%"
+    width="2064"
   >
 </p>
+
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
+https://github.com/user-attachments/assets/6edfc395-be75-4535-9fd3-a2e0aab5d75a
+
+</details>
 
 <details>
 <summary><strong>▶ Watch the full video</strong></summary>

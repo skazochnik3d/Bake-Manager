@@ -6,6 +6,11 @@
   </picture>
 </p>
 
+<p align="center">
+  <strong>Language:</strong>
+  <a href="README.md">English</a> |
+  <a href="README_RU.md">Русский</a>
+</p>
 
 <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />**Bake Manager** is a plugin for **Adobe Substance 3D Painter** that automates multi-Texture-Set mesh-map baking, file organization, layer assignment, reusable bake setups, Smart Materials, and a Marmoset Toolbag bridge.
 
@@ -185,6 +190,23 @@ C:\Users\<User>\Documents\Adobe\Adobe Substance 3D Painter\python\plugins\
 https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
 
 </details>
+
+---
+
+<h2 align="center">Download</h2>
+
+<p align="center">
+  <a href="https://github.com/skazochnik3d/Bake-Manager/releases/latest">
+    <img
+      src="https://img.shields.io/badge/Download-Latest%20Release-E59A24?style=for-the-badge&logo=github&logoColor=white"
+      alt="Download latest release"
+    >
+  </a>
+</p>
+
+<p align="center">
+  Download the latest stable version of Bake Manager.
+</p>
 
 ## Contributors
 

@@ -11,7 +11,9 @@
 
 It is designed primarily for vehicles and other complex assets that use several Texture Sets and require repeated Base, Skew, Local, Cage, Fix, and other bake passes.
 
-> Developed and tested with **Substance 3D Painter 11.1.3** on Windows.
+> [!NOTE]
+>
+> Developed and tested with **Substance 3D Painter 11.1.3** and **Marmoset Toolbag 5.02** on Windows.
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> How It Works
 

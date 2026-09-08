@@ -48,7 +48,7 @@ https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
 
-Browse textures and folders using clear thumbnails and organized previews.
+Automatically exports maps after baking to the location of the '.spp' file, preserving the same folder structure as in the plugin. Add files through Explorer or export them from other applications, and they appear directly in Bake Manager.
 
 <p align="center">
   <img

@@ -12,17 +12,24 @@
   <a href="README_RU.md">Русский</a>
 </p>
 
-<img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" />**Bake Manager** is a plugin for **Adobe Substance 3D Painter** that automates multi-Texture-Set mesh-map baking, file organization, layer assignment, reusable bake setups, Smart Materials, and a Marmoset Toolbag bridge.
+<img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> **Bake Manager** is a plugin that helps prepare your scene for combining baked maps and keeps the entire process organized.
 
-It is designed primarily for vehicles and other complex assets that use several Texture Sets and require repeated Base, Skew, Local, Cage, Fix, and other bake passes.
+It is designed for vehicles and other complex assets that use several Texture Sets.
 
 > [!NOTE]
 >
 > Developed and tested with **Substance 3D Painter 11.1.3** and **Marmoset Toolbag 5.02** on Windows.
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> How It Works
+# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> What does it do?
 
-A quick overview of the complete Bake Manager workflow.
+- Organizes textures into Texture Set folders for clearer visual navigation.
+- **Live Project Folder** — keeps project files synchronized with the plugin. 
+- Saves baking Projects and Setups as presets that can be quickly reused in new projects.
+- Automatically renames maps after baking using the Texture Set name, preset name, and map type.
+- **Marmoset Bridge** — creates a Marmoset Toolbag scene for quick bake adjustments.
+- Smart Material that can be applied to all Texture Sets at once.
+- Automatically assigns textures to layers based on their filenames. 
+- Allows you to add notes to maps, helping you keep track of what was changed or corrected.
 
 <p align="center">
   <img
@@ -39,7 +46,7 @@ https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Better Visuals
+# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
 
 Browse textures and folders using clear thumbnails and organized previews.
 

@@ -12,7 +12,7 @@
   <a href="README_RU.md">Русский</a>
 </p>
 
-<img width="25" height="25" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> **Bake Manager** is a plugin that helps prepare your scene for combining baked maps and keeps the entire process organized.
+<img width="18" height="18" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> **Bake Manager** is a plugin that helps prepare your scene for combining baked maps and keeps the entire process organized.
 
 It is designed for vehicles and other complex assets that use several Texture Sets.
 
@@ -20,7 +20,7 @@ It is designed for vehicles and other complex assets that use several Texture Se
 >
 > Developed and tested with **Substance 3D Painter 11.1.3** and **Marmoset Toolbag 5.02** on Windows.
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> What does it do?
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> What does it do?
 
 - Organizes textures into Texture Set folders for clearer visual navigation.
 - `Live Project Folder` - keeps project files synchronized with the plugin. 

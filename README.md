@@ -23,10 +23,10 @@ It is designed for vehicles and other complex assets that use several Texture Se
 # <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> What does it do?
 
 - Organizes textures into Texture Set folders for clearer visual navigation.
-- [![Live Project Folder](https://img.shields.io/badge/Live%20Project%20Folder-E59A24?style=for-the-badge)](#live-project-folder) - keeps project files synchronized with the plugin. 
+- <kbd>Live Project Folder</kbd> - keeps project files synchronized with the plugin. 
 - Saves baking `Projects` and `Setups` as presets that can be quickly reused in new projects.
 - Automatically renames maps after baking using the Texture Set name, preset name, and map type.
-- ***Marmoset Bridge*** - creates a Marmoset Toolbag scene for quick bake adjustments.
+- <kbd>Marmoset Bridge</kbd> - creates a Marmoset Toolbag scene for quick bake adjustments.
 - Smart Material that can be applied to all Texture Sets at once.
 - Automatically assigns textures to layers based on their filenames. 
 - Allows you to add notes to maps, helping you keep track of what was changed or corrected.
@@ -198,6 +198,16 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
 
 </details>
 
+<p align="center">
+  <a href="https://github.com/skazochnik3d/Bake-Manager/releases/latest">
+    <img
+      src="docs/Download_Button.png"
+      alt="Download Bake Manager"
+      width="260"
+    >
+  </a>
+</p>
+
 ---
 
 <h2 align="center">Download</h2>
@@ -210,8 +220,6 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
     >
   </a>
 </p>
-
-[![Download Bake Manager](https://img.shields.io/badge/Download-Bake%20Manager-E59A24?style=for-the-badge&logo=github&logoColor=white)](https://github.com/skazochnik3d/Bake-Manager/releases/latest)
 
 ## Contributors
 

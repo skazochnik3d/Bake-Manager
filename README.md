@@ -203,7 +203,7 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
     <img
       src="docs/Download_Button.png"
       alt="Download Bake Manager"
-      width="260"
+      width="350"
     >
   </a>
 </p>

@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/Logo_Dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="docs/Logo_Light.svg">
-    <img alt="Bake Manager" src="docs/Logo_Light.svg" width="890">
+    <source media="(prefers-color-scheme: light)" srcset="docs/Logo_Light.png">
+    <img alt="Bake Manager" src="docs/Logo_Light.png" width="890">
   </picture>
 </p>
 

@@ -208,19 +208,6 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
   </a>
 </p>
 
----
-
-<h2 align="center">Download</h2>
-
-<p align="center">
-  <a href="https://github.com/skazochnik3d/Bake-Manager/releases/latest/download/BakeManager.zip">
-    <img
-      src="https://img.shields.io/badge/Download-Latest%20Release-E59A24?style=for-the-badge&logo=github&logoColor=white"
-      alt="Download latest Bake Manager release"
-    >
-  </a>
-</p>
-
 ## Contributors
 
 - **Pavel Rasskazchikov** ([@skazochnik3d](https://github.com/skazochnik3d)) — creator and maintainer.

@@ -12,7 +12,7 @@
   <a href="README_RU.md">Русский</a>
 </p>
 
-<img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> **Bake Manager** is a plugin that helps prepare your scene for combining baked maps and keeps the entire process organized.
+<img width="25" height="25" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> **Bake Manager** is a plugin that helps prepare your scene for combining baked maps and keeps the entire process organized.
 
 It is designed for vehicles and other complex assets that use several Texture Sets.
 

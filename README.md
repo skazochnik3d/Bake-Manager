@@ -160,7 +160,6 @@ https://github.com/user-attachments/assets/5686078b-1b1e-48e3-b885-8f2935c2eb6d
 
 </details>
 
-Blablalbalbalbal
 
 <p align="center">
   <img

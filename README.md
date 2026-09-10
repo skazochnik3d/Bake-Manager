@@ -126,7 +126,7 @@ https://github.com/user-attachments/assets/1b635dd1-c169-47e9-b2f0-869359585c92
 
 # <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Marmoset Bridge
 
-Send meshes and settings to Marmoset Toolbag, then organize and return the baked maps to Painter.
+Сreates a Marmoset bake scene using meshes and Texture Set settings from Painter and send the renamed maps back.
 
 <p align="center">
   <img
@@ -143,7 +143,11 @@ https://github.com/user-attachments/assets/5686078b-1b1e-48e3-b885-8f2935c2eb6d
 
 </details>
 
+Click a low-poly mesh to open its Bake Group cage settings, adjust Offset or Skew.
 
+> [!NOTE]
+>
+> It's function not working if you in paint mode skew or cage, you need press `Q` and select meshes
 
 <p align="center">
   <img

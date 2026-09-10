@@ -48,6 +48,9 @@ https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 # <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
 
 Automatically exports maps after baking to the location of the `.spp` file, preserving the same folder structure as in the plugin. Add files through Explorer or export them from other applications, and they appear directly in Bake Manager.
+> [!NOTE]
+>
+> The plugin’s features only work when you click `Bake Setups`, not the `Bake` blue button in Painter’s Baking window.
 
 <p align="center">
   <img
@@ -66,7 +69,7 @@ https://github.com/user-attachments/assets/627c906f-ecd7-4731-a42e-57e98549a389
 
 # <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Naming
 
-Automatically name baked maps using their Texture Set, map type, and Setup.
+Automatically names baked maps using their Texture Set, map type, and Setup. This prevents Substance 3D Painter from overwriting previous bakes that would otherwise need to be renamed manually.
 
 <p align="center">
   <img
@@ -99,25 +102,6 @@ Automatically assign baked maps to the matching layers and Texture Sets. The fil
 <summary><strong>▶ Watch the full video</strong></summary>
 
 https://github.com/user-attachments/assets/6edfc395-be75-4535-9fd3-a2e0aab5d75a
-
-</details>
-
-# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
-
-Create, save, and apply Smart Materials to all Texture Sets **at once**.
-
-<p align="center">
-  <img
-    src="https://github.com/user-attachments/assets/794fc67d-3efd-44f5-8ad2-69216e5b4df6"
-    alt="Bake Manager demonstration"
-    width="1238"
-  >
-</p>
-
-<details>
-<summary><strong>▶ Watch the full video</strong></summary>
-
-https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1a3deff06af
 
 </details>
 
@@ -173,6 +157,25 @@ https://github.com/user-attachments/assets/5686078b-1b1e-48e3-b885-8f2935c2eb6d
 <summary><strong>▶ Watch the full video</strong></summary>
 
 https://github.com/user-attachments/assets/c6e1bf49-cc4c-40f3-8850-662e934e859b
+
+</details>
+
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
+
+Create, save, and apply Smart Materials to all Texture Sets **at once**.
+
+<p align="center">
+  <img
+    src="https://github.com/user-attachments/assets/794fc67d-3efd-44f5-8ad2-69216e5b4df6"
+    alt="Bake Manager demonstration"
+    width="1238"
+  >
+</p>
+
+<details>
+<summary><strong>▶ Watch the full video</strong></summary>
+
+https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1a3deff06af
 
 </details>
 

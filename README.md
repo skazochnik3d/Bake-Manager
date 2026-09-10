@@ -209,11 +209,6 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
   </a>
 </p>
 
-## Contributors
-
-- **Pavel Rasskazchikov** ([@skazochnik3d](https://github.com/skazochnik3d)) — creator and maintainer.
-- **OpenAI Codex (ChatGPT)** — AI-assisted implementation, debugging, testing, and documentation.
-
 ## License
 
 No license has been selected yet. Until a license is added, redistribution and modification rights are not automatically granted. Add a `LICENSE` file before wider public distribution.

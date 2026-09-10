@@ -54,7 +54,7 @@ Automatically exports maps after baking to the location of the `.spp` file, pres
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/b34abf2d-74b8-4898-8e9d-b86b305e7b50"
+    src="https://github.com/user-attachments/assets/1cf48ac4-5615-4456-b6b9-f6964d85d149"
     alt="Better Visuals"
     width="2064"
   >
@@ -63,7 +63,7 @@ Automatically exports maps after baking to the location of the `.spp` file, pres
 <details>
 <summary><strong>▶ Watch the full video</strong></summary>
 
-https://github.com/user-attachments/assets/627c906f-ecd7-4731-a42e-57e98549a389
+https://github.com/user-attachments/assets/d5736dd5-088e-499f-a777-4e7646e91ad4
 
 </details>
 

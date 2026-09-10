@@ -213,7 +213,3 @@ https://github.com/user-attachments/assets/12e3b201-a1e7-4d98-b9e8-38b8df3f4e27
     >
   </a>
 </p>
-
-## License
-
-No license has been selected yet. Until a license is added, redistribution and modification rights are not automatically granted. Add a `LICENSE` file before wider public distribution.

@@ -23,13 +23,12 @@ It is designed for vehicles and other complex assets that use several Texture Se
 # <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> What does it do?
 
 - Organizes textures into Texture Set folders for clearer visual navigation.
-- `Live Project Folder` - keeps project files synchronized with the plugin. 
+- `Live Project Folder` - keeps project files synchronized with the folders Explorer. 
 - Saves baking `Projects` and `Setups` as presets that can be quickly reused in new projects.
 - Automatically renames maps after baking using the Texture Set name, preset name, and map type.
 - `Marmoset Bridge` - creates a Marmoset Toolbag scene for quick bake adjustments.
 - Smart Material that can be applied to all Texture Sets at once.
 - Automatically assigns textures to layers based on their filenames. 
-- Allows you to add notes to maps, helping you keep track of what was changed or corrected.
 
 <p align="center">
   <img
@@ -46,7 +45,7 @@ https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
 
 Automatically exports maps after baking to the location of the `.spp` file, preserving the same folder structure as in the plugin. Add files through Explorer or export them from other applications, and they appear directly in Bake Manager.
 

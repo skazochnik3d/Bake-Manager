@@ -64,7 +64,7 @@ https://github.com/user-attachments/assets/627c906f-ecd7-4731-a42e-57e98549a389
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Naming
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Naming
 
 Automatically name baked maps using their Texture Set, map type, and Setup.
 
@@ -83,9 +83,9 @@ https://github.com/user-attachments/assets/d6a2e256-ad3f-4d47-b848-5819fe839b52
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Map Assignment
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Automatic Map Assignment
 
-Automatically assign baked maps to the matching layers and Texture Sets.
+Automatically assign baked maps to the matching layers and Texture Sets. The file name shows where to place the map. For example, `Cube_N_Base` goes to `Cube` folder in `N` subfolder and `Base` layer.
 
 <p align="center">
   <img
@@ -102,9 +102,9 @@ https://github.com/user-attachments/assets/6edfc395-be75-4535-9fd3-a2e0aab5d75a
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Smart Materials
 
-Create, save, and apply reusable Smart Materials across Texture Sets.
+Create, save, and apply Smart Materials to all Texture Sets **at once**.
 
 <p align="center">
   <img
@@ -121,9 +121,9 @@ https://github.com/user-attachments/assets/162f4802-b982-492d-b733-b1a3deff06af
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Projects and Setups
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Projects and Setups
 
-Organize reusable baking configurations into Projects and Setups.
+Organize reusable baking settings into Projects and Setups.
 
 <p align="center">
   <img
@@ -140,7 +140,7 @@ https://github.com/user-attachments/assets/1b635dd1-c169-47e9-b2f0-869359585c92
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Marmoset Bridge
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Marmoset Bridge
 
 Send meshes and settings to Marmoset Toolbag, then organize and return the baked maps to Painter.
 
@@ -176,7 +176,7 @@ https://github.com/user-attachments/assets/c6e1bf49-cc4c-40f3-8850-662e934e859b
 
 </details>
 
-# <img width="16" height="16" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Installation
+# <img width="24" height="24" alt="Image" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Installation
 
 ```text
 C:\Users\<User>\Documents\Adobe\Adobe Substance 3D Painter\python\plugins\

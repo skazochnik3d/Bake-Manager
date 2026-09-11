@@ -20,6 +20,7 @@
 >
 > Разработано и протестировано с **Substance 3D Painter 11.1.3** и **Marmoset Toolbag 5.02** на Windows.
 
+
 # <img width="24" height="24" alt="Иконка Bake Manager" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Что умеет плагин?
 
 - Распределяет текстуры по папкам текстурных сетов для более удобной навигации.
@@ -44,6 +45,7 @@
 https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 </details>
+
 
 # <img width="24" height="24" alt="Иконка Bake Manager" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
 

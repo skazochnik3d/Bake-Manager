@@ -49,7 +49,7 @@ https://github.com/user-attachments/assets/93bb88c2-f13a-4932-b72f-3497a7031c79
 
 # <img width="24" height="24" alt="Иконка Bake Manager" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Live Project Folder
 
-Автоматически экспортирует карты после запекания рядом с файлом `.spp`, сохраняя такую же структуру папок, как в плагине. Добавляйте файлы через Проводник или экспортируйте их из других программ - они появятся прямо в Bake Manager.
+Автоматически экспортирует карты после запекания по пути сцены `.spp`, сохраняя такую же структуру папок, как в плагине. Добавляйте файлы через Проводник или экспортируйте их из других программ - они появятся прямо в Bake Manager.
 
 > [!NOTE]
 >
@@ -110,7 +110,7 @@ https://github.com/user-attachments/assets/6edfc395-be75-4535-9fd3-a2e0aab5d75a
 
 # <img width="24" height="24" alt="Иконка Bake Manager" src="https://github.com/user-attachments/assets/33be734e-52f9-4f33-944a-1e3c509d2bd5" /> Projects и Setups
 
-Организуйте повторно используемые настройки запекания с помощью Projects и Setups.
+Сохраняйте повторно используемые настройки запекания с помощью Projects и Setups.
 
 <p align="center">
   <img
@@ -146,7 +146,7 @@ https://github.com/user-attachments/assets/5686078b-1b1e-48e3-b885-8f2935c2eb6d
 
 </details>
 
-Нажмите на low-poly меш, чтобы открыть настройки кейджа его Bake Group и изменить Offset или Skew.
+Нажмите на low-poly меш, чтобы открыть настройки Cage его Bake Group и изменить Offset или Skew.
 
 > [!NOTE]
 >

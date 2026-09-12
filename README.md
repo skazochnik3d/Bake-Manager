@@ -75,6 +75,7 @@ Automatically names baked maps using their Texture Set, map type, and Setup. Thi
 >
 > Use `__` to separate folders and `_` for words within a layer name.
 > For example, `Cube__N__Fix_01.png` is assigned to: `Cube → N → Fix_01`
+> If these folders or the layer do not exist, the plugin creates them automatically.
 
 <p align="center">
   <img

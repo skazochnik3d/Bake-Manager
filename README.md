@@ -71,6 +71,11 @@ https://github.com/user-attachments/assets/d5736dd5-088e-499f-a777-4e7646e91ad4
 
 Automatically names baked maps using their Texture Set, map type, and Setup. This prevents Substance 3D Painter from overwriting previous bakes that would otherwise need to be renamed manually.
 
+> [!NOTE]
+>
+> Use `__` to separate folders and `_` for words within a layer name.
+> For example, `Cube__N__Fix_01.png` is assigned to: `Cube → N → Fix_01`
+
 <p align="center">
   <img
     src="https://github.com/user-attachments/assets/22a0654c-51fe-487f-bcf5-ce0df9d3fd6a"
